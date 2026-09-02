@@ -1,0 +1,30 @@
+# ---- Terraform ----
+# 로컬 state와 provider 바이너리 등은 git에 올리지 않습니다.
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# 변수 파일 중 민감한 값이 들어갈 수 있는 것들
+*.tfvars.secret
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI 설정
+.terraformrc
+terraform.rc
+.terraform.lock.hcl.bak
+
+# ---- kubeconfig / 자격증명 ----
+kubeconfig
+*.kubeconfig
+.env
+
+# ---- OS / 에디터 ----
+.DS_Store
+*.swp
+.idea/
+.vscode/
