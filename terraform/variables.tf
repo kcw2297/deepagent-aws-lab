@@ -38,3 +38,17 @@ variable "private_subnet_cidrs" {
   type        = list(string)
   default     = ["10.0.32.0/20", "10.0.48.0/20"]
 }
+
+# ---------- EKS 컨트롤플레인 (Day 2) ----------
+
+variable "kubernetes_version" {
+  description = "EKS 클러스터의 쿠버네티스 버전. 지원 목록은 `aws eks describe-cluster-versions`로 확인."
+  type        = string
+  default     = "1.36"
+}
+
+variable "cluster_public_access_cidrs" {
+  description = "쿠버네티스 API 서버(퍼블릭 엔드포인트)에 접근 가능한 IP 대역. 조이려면 [\"<내 공인IP>/32\"]."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}

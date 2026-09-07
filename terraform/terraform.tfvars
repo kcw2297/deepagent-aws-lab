@@ -9,3 +9,7 @@ vpc_cidr = "10.0.0.0/16"
 azs                  = ["ap-northeast-2a", "ap-northeast-2c"]
 public_subnet_cidrs  = ["10.0.0.0/20", "10.0.16.0/20"]
 private_subnet_cidrs = ["10.0.32.0/20", "10.0.48.0/20"]
+
+# ---------- EKS (Day 2) ----------
+kubernetes_version          = "1.36"
+cluster_public_access_cidrs = ["0.0.0.0/0"]
