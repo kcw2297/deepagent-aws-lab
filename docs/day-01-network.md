@@ -61,10 +61,13 @@ EKS 클러스터는 반드시 **기존 VPC의 서브넷 위에** 올라갑니다
 
 ## 실습 순서
 
+> 아래는 terraform 명령을 직접 쓰는 형태입니다. 평소에는 리포 루트에서
+> `make init / plan / apply / destroy`로 더 짧게 실행할 수 있습니다.
+
 ```bash
 cd terraform
 
-# 1) 초기화 — provider 다운로드 (최초 1회, 또는 provider 바뀔 때)
+# 1) 초기화 — S3 백엔드 연결 + provider 다운로드 (기기당 1회)
 terraform init
 
 # 2) 코드 형식/문법 점검 (선택이지만 습관 들이면 좋음)
@@ -76,7 +79,8 @@ terraform plan
 
 # 4) 실제 생성
 terraform apply
-#   → "약 12개 리소스 생성" 확인 후 yes
+#   → "Plan: 14 to add" 확인 후 yes
+#   (VPC 1 + IGW 1 + 서브넷 4 + EIP 1 + NAT 1 + 라우트테이블 2 + 연결 4)
 
 # 5) 콘솔/CLI로 관찰
 terraform output

@@ -3,11 +3,20 @@
 매일 한 계층씩. 각 Day는 30분~1시간 분량을 목표로 하며, 앞 계층 위에 코드를 쌓아 올립니다.
 "개념 이해 → 코드 작성 → apply로 관찰 → destroy로 정리"의 반복입니다.
 
+> **이 파일이 진행 상황의 단일 기준점입니다.** Day를 마치면 여기서만 표시를 갱신하세요.
+> 표기: `✅` 완료 · `🟢 (현재)` 진행 중 · 표시 없음 = 예정
+
 ---
 
 ## Phase 0 — 기반 (Foundation)
 
-### Day 1 — 네트워크 계층 🟢 (현재)
+### Day 0 — 원격 state ✅ (선행 완료)
+여러 맥북에서 같은 인프라를 다루기 위한 기반. 원래 Day 12 주제였습니다.
+- state가 무엇이고 왜 git에 올리면 안 되는지
+- S3 백엔드 + `use_lockfile` 네이티브 락 (DynamoDB 불필요)
+- 📄 상세: [remote-state.md](remote-state.md)
+
+### Day 1 — 네트워크 계층 ✅
 EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 인프라.
 - VPC, CIDR 블록 개념
 - 퍼블릭/프라이빗 서브넷과 AZ(가용영역) 분산
@@ -15,7 +24,7 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - EKS가 요구하는 서브넷 태그의 의미
 - 📄 상세: [day-01-network.md](day-01-network.md)
 
-### Day 2 — EKS 컨트롤플레인
+### Day 2 — EKS 컨트롤플레인 🟢 (현재)
 관리형 쿠버네티스 API 서버(컨트롤플레인) 생성.
 - `aws_eks_cluster`, 클러스터가 쓰는 IAM 역할
 - 컨트롤플레인 ↔ 노드 통신, 클러스터 보안그룹
@@ -71,10 +80,11 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - CloudWatch Container Insights / metrics-server
 - 로그/메트릭 수집 구조
 
-### Day 12 — 리팩터링: 모듈화 & 원격 state
+### Day 12 — 리팩터링: 모듈화 & 환경 분리
 - 지금까지의 코드를 Terraform 모듈로 정리
-- S3 + DynamoDB 원격 백엔드로 state 관리
-- 여러 환경(dev/prod) 구성 전략
+- 여러 환경(dev/prod) 구성 전략 — 백엔드 `key`를 나누거나 workspace 활용
+- ~~S3 원격 백엔드로 state 관리~~ → ✅ **선행 완료**: [remote-state.md](remote-state.md)
+  (맥북 여러 대에서 작업하게 되어 앞당겨 적용했습니다)
 
 ---
 
