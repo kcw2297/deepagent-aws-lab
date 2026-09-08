@@ -63,3 +63,10 @@ output "node_asg_names" {
   description = "EKS가 내부적으로 만든 오토스케일링 그룹 이름 (콘솔에서 노드를 찾을 때 유용)"
   value       = aws_eks_node_group.this.resources[0].autoscaling_groups[*].name
 }
+
+# ---------- 접근 제어 (Day 4) ----------
+
+output "viewer_role_arn" {
+  description = "읽기 전용 역할 ARN. `aws sts assume-role --role-arn <이 값>`으로 실험합니다."
+  value       = aws_iam_role.viewer.arn
+}

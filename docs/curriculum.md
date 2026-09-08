@@ -31,24 +31,30 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - 클러스터 엔드포인트(퍼블릭/프라이빗) 개념, ENI와의 차이
 - 📄 상세: [day-02-eks-controlplane.md](day-02-eks-controlplane.md)
 
-### Day 3 — 노드 그룹 (워커 노드) 🟢 (현재)
+### Day 3 — 노드 그룹 (워커 노드) ✅
 실제 파드가 돌아갈 컴퓨트.
 - Managed Node Group vs self-managed vs Fargate 개념 비교
 - `aws_eks_node_group`, 노드용 IAM 역할(신뢰 서비스가 `ec2.amazonaws.com`), 인스턴스 타입/스케일 설정
 - 노드가 클러스터에 조인되는 원리, 정책 3개가 각각 없으면 깨지는 것
+- ASG vs 스케줄러 vs 오토스케일러 — 누가 무엇을 결정하는가
 - 📄 상세: [day-03-nodegroup.md](day-03-nodegroup.md)
 
-### Day 4 — 접근 제어 (kubectl & IAM)
-내 손에서 클러스터를 조작.
-- `aws eks update-kubeconfig`로 kubeconfig 구성
-- EKS Access Entries (구 aws-auth ConfigMap) — IAM ↔ K8s RBAC 매핑
-- `kubectl get nodes`로 첫 확인
+### Day 4 — 접근 제어 (kubectl & IAM) ✅
+내 손에서 클러스터를 조작하고, **남에게 권한을 주는 법**을 배웁니다.
+- `aws eks update-kubeconfig`로 kubeconfig 구성 → `kubectl get nodes` 첫 성공
+- kubectl 인증 원리 — exec 플러그인, presigned STS URL ("토큰은 신분증이지 권한증이 아니다")
+- EKS Access Entries (구 aws-auth ConfigMap) — IAM ↔ K8s 신원 번역표
+- Access Entry(인증) vs 액세스 정책(인가)의 분리
+- 실습: 읽기 전용 IAM 역할을 만들어 `Forbidden` 직접 확인
+- 📄 상세: [day-04-access-control.md](day-04-access-control.md)
+
+> **Phase 0 완료** — 네트워크 → 컨트롤플레인 → 노드 → 접근 제어까지 기반이 갖춰졌습니다.
 
 ---
 
 ## Phase 1 — 워크로드 & 애드온
 
-### Day 5 — 첫 워크로드 배포
+### Day 5 — 첫 워크로드 배포 🟢 (현재)
 - Namespace, Deployment, Service(ClusterIP) 배포
 - `kubectl`로 파드 로그/exec/describe 실습
 - 이론으로 알던 K8s 오브젝트를 실제로 관찰
