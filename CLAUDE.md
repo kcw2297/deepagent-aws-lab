@@ -43,6 +43,19 @@ AWS EKS를 **한 계층씩 직접 만들어 보며** 배우는 학습용 리포�
 - **state 버킷은 Terraform 관리 대상이 아닙니다.** `destroy`로 지워지면 안 되므로
   의도적으로 코드 바깥(aws CLI로 1회 생성)에 둡니다. `.tf`에 버킷 리소스를 추가하지 마세요.
 
+## Terraform 바깥에 두는 리소스 (의도된 예외)
+
+`destroy`와 함께 사라지면 안 되는 것들입니다. **`.tf`에 추가하지 마세요.**
+
+| 리소스 | 이유 |
+|--------|------|
+| S3 `deepagent-eks-tfstate` | state 보관소. 닭과 달걀 문제 |
+| ECR `deepagent-app` | 앱 이미지. 매 세션 재빌드/재푸시가 번거로움 |
+| ECR `charts/deepagent-app` | Helm 차트(OCI 아티팩트) |
+
+ECR 비용은 GB당 월 $0.10이고 이미지가 작아 **월 1센트 수준**이라, 매일 destroy하는
+원칙보다 편의를 택한 의도적 예외입니다. 태그 없는 이미지는 14일 뒤 자동 삭제됩니다.
+
 ## 코드 작업 흐름
 
 리포 루트의 `Makefile`을 씁니다. (`make` = 사용법, `make init/plan/apply/destroy`)

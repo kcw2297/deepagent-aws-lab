@@ -1,0 +1,10 @@
+apiVersion: v2
+name: deepagent-app
+description: Day 5 실습용 최소 앱 차트 — ECR(OCI)에 차트를 올리고 EKS에 설치합니다
+type: application
+
+# version    = 차트 자체의 버전 (템플릿이 바뀌면 올림)
+# appVersion = 담고 있는 앱의 버전 (이미지 태그 기본값으로 씀)
+# 둘을 헷갈리기 쉬운데, ECR에 푸시될 때 아티팩트 태그가 되는 건 version 쪽입니다.
+version: 0.1.0
+appVersion: "0.1.0"

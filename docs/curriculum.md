@@ -54,23 +54,48 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 
 ## Phase 1 — 워크로드 & 애드온
 
-### Day 5 — 첫 워크로드 배포 🟢 (현재)
-- Namespace, Deployment, Service(ClusterIP) 배포
-- `kubectl`로 파드 로그/exec/describe 실습
-- 이론으로 알던 K8s 오브젝트를 실제로 관찰
+> **전제**: Namespace / Deployment / Service / Pod 같은 기본 오브젝트는 이미 아는 것으로 봅니다.
+> 그래서 "첫 워크로드 배포" 같은 입문 단계는 건너뛰고, **EKS 고유의 문제**에 집중합니다.
+
+### Day 5 — ECR + Helm으로 내 앱 배포 🟢 (현재)
+공개 이미지가 아니라 **내가 만든 이미지와 차트**를 EKS에 올립니다.
+- ECR 리포지토리 (Terraform) — 이미지용 + **차트용(OCI 아티팩트)**
+- `aws ecr get-login-password`가 왜 임시 토큰인지 (Day 4의 STS와 같은 맥락)
+- `docker build --platform linux/amd64` — **맥북 arm64 ↔ 노드 x86_64 불일치 함정**
+- `helm package` → `helm push oci://...` → `helm install oci://...`
+- 노드가 정말 ECR에서 pull하는지 확인 — **Day 3의 `ECRReadOnly` 정책 실증**
+- 이미지 태그 전략(`latest`가 위험한 이유), `imagePullPolicy`
 
 ### Day 6 — 핵심 애드온 이해
 - VPC CNI, CoreDNS, kube-proxy — EKS의 3대 필수 애드온
-- 파드가 어떻게 VPC IP를 받는지 (VPC CNI의 원리)
+- 파드가 VPC IP를 받는 원리 (VPC CNI, ENI/IP 워밍풀)
+- **VPC CNI를 쓸 때만 가능한 것들**: 파드 단위 보안그룹, ALB `target-type: ip`,
+  VPC Flow Logs에서 파드 트래픽 관측 → CNI 교체 시 무엇을 잃는지의 근거
+
+### Day 6-1 — CNI 교체: Cilium (선택 · 파괴적)
+EKS에서 CNI는 **교체 가능**합니다. 무엇을 얻고 무엇을 잃는지 직접 확인합니다.
+- **ENI 모드(완전 교체)** vs **체이닝 모드(VPC CNI 위에 얹기)** 비교
+- `kubeProxyReplacement` — eBPF로 Service 로드밸런싱, kube-proxy DaemonSet 제거
+- 잃는 것: 파드 단위 보안그룹, ALB `target-type: ip`, VPC Flow Logs 가시성
+- AWS 지원 범위 — Hybrid Nodes는 공식 지원, 일반 EKS는 "가능하지만 CNI는 지원 범위 밖"
+- ⚠️ 노드 재생성이 필요해 파괴적입니다. Day 6 이후 독립된 세션에서 진행하세요.
 
 ### Day 7 — IRSA / Pod Identity
 - 파드에 AWS 권한을 안전하게 부여하는 방법
 - OIDC provider, `aws_iam_role`의 신뢰 정책
+- **왜 필요한가**: 지금은 노드 역할의 권한을 그 노드의 모든 파드가 공유합니다
+  (Day 3에서 확인한 문제)
+- IRSA vs EKS Pod Identity 비교
 
-### Day 8 — AWS Load Balancer Controller & Ingress
-- Helm으로 컨트롤러 설치
-- Ingress → ALB 자동 생성 실습
-- Service type LoadBalancer(NLB) vs Ingress(ALB)
+### Day 8 — Gateway API + AWS Load Balancer Controller
+**Ingress가 아니라 Gateway API로 갑니다.**
+- Ingress API는 **동결(frozen)** 상태 — GA지만 신규 기능이 들어가지 않습니다
+- AWS Load Balancer Controller가 **2026년 초 Gateway API GA 지원** (LBC v3.4.0)
+- NGINX Ingress Controller **2026 Q1 EOL** — 마이그레이션 수요의 배경
+- GatewayClass / Gateway / HTTPRoute 구조와 Ingress 대비 무엇이 나아졌는지
+  (역할 분리: 인프라팀은 Gateway, 앱팀은 Route)
+- Helm으로 컨트롤러 설치 → Gateway API로 ALB 자동 생성
+- Ingress는 **비교·마이그레이션 관점으로만** 다룹니다
 
 ---
 
@@ -79,13 +104,16 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 ### Day 9 — 스토리지 (EBS/EFS CSI)
 - PersistentVolume / PVC / StorageClass
 - EBS CSI 드라이버로 동적 볼륨 프로비저닝
+- CSI 드라이버가 IRSA를 쓰는 구조 (Day 7과 연결)
 
 ### Day 10 — 오토스케일링
 - HPA(파드 수평 확장)
-- Cluster Autoscaler vs Karpenter (노드 확장)
+- **Cluster Autoscaler vs Karpenter** — Day 3에서 본 ASG를 쓰는 쪽과 안 쓰는 쪽
+- Terraform과 오토스케일러의 `desired_size` 충돌 → `ignore_changes`
 
 ### Day 11 — 관측성 (Observability)
 - CloudWatch Container Insights / metrics-server
+- 컨트롤플레인 로그 (`enabled_cluster_log_types`) — Day 2에서 비용 때문에 꺼둔 것
 - 로그/메트릭 수집 구조
 
 ### Day 12 — 리팩터링: 모듈화 & 환경 분리
@@ -98,11 +126,12 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 
 ## 이후 심화 주제 (선택)
 
-- GitOps (ArgoCD/Flux)
+- GitOps (ArgoCD/Flux) — Day 5의 Helm 차트를 ArgoCD로 배포
 - 네트워크 정책 / 보안 (Network Policy, Pod Security Standards)
-- 서비스 메시 개요
+- 서비스 메시 개요 — Cilium Service Mesh 포함 (Day 6-1과 연결)
 - 비용 최적화 (Spot, Graviton, 우측 사이징)
-- 업그레이드 전략 (클러스터/노드 버전 업)
+  - Graviton으로 가면 Day 5의 `--platform` 문제가 사라집니다 (맥북 arm64와 일치)
+- 업그레이드 전략 (클러스터/노드 버전 업, 표준 지원 → 연장 지원 요금 급등 주의)
 
 ---
 

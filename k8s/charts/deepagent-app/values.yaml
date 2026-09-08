@@ -1,0 +1,29 @@
+# ── 이미지 ──
+image:
+  # ECR 주소. helm install 시 --set 으로 덮어써도 됩니다.
+  repository: 590184068466.dkr.ecr.ap-northeast-2.amazonaws.com/deepagent-app
+  # 비워두면 Chart.yaml의 appVersion을 씁니다.
+  tag: ""
+  # IfNotPresent = 노드에 이미 있으면 다시 받지 않음.
+  # latest 태그를 쓰면서 이 값이면 "새로 푸시했는데 옛 이미지가 뜨는" 함정에 빠집니다.
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# 리소스 요청/제한 — 스케줄러가 자리를 계산하는 근거입니다.
+# requests가 없으면 오토스케일러(Day 10)가 판단할 기준도 사라집니다.
+resources:
+  requests:
+    cpu: 50m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 64Mi
+
+# 파드를 AZ에 고루 퍼뜨립니다. Day 1에서 서브넷을 2a/2c로 나눈 이유가 여기서 쓰입니다.
+topologySpreadEnabled: true
