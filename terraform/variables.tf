@@ -52,3 +52,35 @@ variable "cluster_public_access_cidrs" {
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
+
+# ---------- 노드 그룹 (Day 3) ----------
+
+variable "node_instance_type" {
+  description = "워커 노드 EC2 인스턴스 타입. t3.medium이 EKS 학습용 최소 실용 사양입니다."
+  type        = string
+  default     = "t3.medium"
+}
+
+variable "node_desired_size" {
+  description = "평상시 노드 수. 비용을 더 줄이려면 1로 낮출 수 있습니다(대신 AZ 분산 관찰 불가)."
+  type        = number
+  default     = 2
+}
+
+variable "node_min_size" {
+  description = "노드 최소 수"
+  type        = number
+  default     = 1
+}
+
+variable "node_max_size" {
+  description = "노드 최대 수. Day 10 오토스케일링 실습의 상한이 됩니다."
+  type        = number
+  default     = 3
+}
+
+variable "node_disk_size" {
+  description = "노드 루트 EBS 볼륨 크기(GB)"
+  type        = number
+  default     = 20
+}

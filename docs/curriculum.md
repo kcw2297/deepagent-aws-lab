@@ -24,18 +24,19 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - EKS가 요구하는 서브넷 태그의 의미
 - 📄 상세: [day-01-network.md](day-01-network.md)
 
-### Day 2 — EKS 컨트롤플레인 🟢 (현재)
+### Day 2 — EKS 컨트롤플레인 ✅
 관리형 쿠버네티스 API 서버(컨트롤플레인) 생성.
 - `aws_eks_cluster`, 클러스터가 쓰는 IAM 역할 (신뢰 정책 vs 권한 정책)
 - 컨트롤플레인 ↔ 노드 통신, 클러스터 보안그룹
 - 클러스터 엔드포인트(퍼블릭/프라이빗) 개념, ENI와의 차이
 - 📄 상세: [day-02-eks-controlplane.md](day-02-eks-controlplane.md)
 
-### Day 3 — 노드 그룹 (워커 노드)
+### Day 3 — 노드 그룹 (워커 노드) 🟢 (현재)
 실제 파드가 돌아갈 컴퓨트.
 - Managed Node Group vs self-managed vs Fargate 개념 비교
-- `aws_eks_node_group`, 노드용 IAM 역할, 인스턴스 타입/스케일 설정
-- 노드가 클러스터에 조인되는 원리
+- `aws_eks_node_group`, 노드용 IAM 역할(신뢰 서비스가 `ec2.amazonaws.com`), 인스턴스 타입/스케일 설정
+- 노드가 클러스터에 조인되는 원리, 정책 3개가 각각 없으면 깨지는 것
+- 📄 상세: [day-03-nodegroup.md](day-03-nodegroup.md)
 
 ### Day 4 — 접근 제어 (kubectl & IAM)
 내 손에서 클러스터를 조작.

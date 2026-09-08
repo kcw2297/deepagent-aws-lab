@@ -13,3 +13,10 @@ private_subnet_cidrs = ["10.0.32.0/20", "10.0.48.0/20"]
 # ---------- EKS (Day 2) ----------
 kubernetes_version          = "1.36"
 cluster_public_access_cidrs = ["0.0.0.0/0"]
+
+# ---------- 노드 그룹 (Day 3) ----------
+node_instance_type = "t3.medium"
+node_desired_size  = 2
+node_min_size      = 1
+node_max_size      = 3
+node_disk_size     = 20

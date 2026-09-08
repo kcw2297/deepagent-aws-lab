@@ -41,3 +41,25 @@ output "cluster_security_group_id" {
   description = "EKS가 자동 생성한 클러스터 보안그룹. 컨트롤플레인 ↔ 노드 통신에 사용 (Day 3에서 등장)"
   value       = aws_eks_cluster.this.vpc_config[0].cluster_security_group_id
 }
+
+# ---------- 노드 그룹 (Day 3) ----------
+
+output "node_group_name" {
+  description = "관리형 노드 그룹 이름"
+  value       = aws_eks_node_group.this.node_group_name
+}
+
+output "node_role_arn" {
+  description = "워커 노드가 사용하는 IAM 역할 (신뢰 서비스가 ec2.amazonaws.com인 점이 클러스터 역할과 다름)"
+  value       = aws_iam_role.node.arn
+}
+
+output "node_group_status" {
+  description = "노드 그룹 상태. ACTIVE면 노드가 클러스터에 조인 완료."
+  value       = aws_eks_node_group.this.status
+}
+
+output "node_asg_names" {
+  description = "EKS가 내부적으로 만든 오토스케일링 그룹 이름 (콘솔에서 노드를 찾을 때 유용)"
+  value       = aws_eks_node_group.this.resources[0].autoscaling_groups[*].name
+}
