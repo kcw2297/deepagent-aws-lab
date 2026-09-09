@@ -1,0 +1,52 @@
+# ── LoadBalancerConfiguration (AWS 확장) ──
+# Gateway API 표준에는 "인터넷에 노출할지" 같은 AWS 고유 설정이 없습니다.
+# 그래서 AWS가 별도 CRD(gateway.k8s.aws 그룹)로 제공하고,
+# Gateway가 infrastructure.parametersRef로 이를 참조합니다.
+#
+# [Ingress와의 차이 ②]
+# Ingress에서는 이게 애노테이션이었습니다:
+#   alb.ingress.kubernetes.io/scheme: internet-facing
+# 이제 스키마가 있는 리소스라, 잘못된 값을 쓰면 kubectl이 거부합니다.
+apiVersion: gateway.k8s.aws/v1
+kind: LoadBalancerConfiguration
+metadata:
+  name: alb-public
+  namespace: demo
+spec:
+  # internal = VPC 내부용 / internet-facing = 인터넷에서 접근 가능
+  scheme: internet-facing
+  ipAddressType: ipv4
+  tags:
+    Project: deepagent-eks-lab
+    Day: "8"
+---
+# ── Gateway ──
+# 실제 ALB 하나에 대응합니다. 이 오브젝트를 만들면 컨트롤러가 ALB를 생성합니다.
+#
+# [Ingress와의 차이 ③ — 역할 분리]
+# Ingress는 "어디로 보낼지(라우팅)"와 "어떻게 노출할지(인프라)"가 한 오브젝트에 섞여 있었습니다.
+# Gateway API는 나눕니다:
+#   Gateway   → 인프라팀 관심사 (포트, TLS, 노출 방식)
+#   HTTPRoute → 앱팀 관심사 (경로, 백엔드)
+# 그래서 인프라팀이 Gateway 하나를 만들어두면 여러 앱팀이 각자 Route를 붙일 수 있습니다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: app-gateway
+  namespace: demo
+spec:
+  gatewayClassName: alb
+  infrastructure:
+    parametersRef:
+      group: gateway.k8s.aws
+      kind: LoadBalancerConfiguration
+      name: alb-public
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          # Same = 이 Gateway와 같은 네임스페이스의 Route만 붙을 수 있음
+          # All / Selector 로 바꾸면 다른 네임스페이스에도 개방됩니다
+          from: Same

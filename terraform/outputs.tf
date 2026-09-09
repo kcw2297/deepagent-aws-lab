@@ -98,3 +98,10 @@ output "pod_identity_demo_role_arn" {
   description = "Pod Identity 실습용 역할 (애노테이션 불필요)"
   value       = aws_iam_role.pod_identity_demo.arn
 }
+
+# ---------- Load Balancer Controller (Day 8) ----------
+
+output "alb_controller_role_arn" {
+  description = "LB Controller가 쓰는 IAM 역할 (Pod Identity로 연결됨)"
+  value       = aws_iam_role.alb_controller.arn
+}

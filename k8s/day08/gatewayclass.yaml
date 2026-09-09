@@ -1,0 +1,18 @@
+# ── GatewayClass ──
+# "이 종류의 Gateway는 누가 처리하는가"를 선언합니다.
+# 쿠버네티스의 StorageClass와 같은 역할 — 구현체를 가리키는 포인터입니다.
+#
+# controllerName이 핵심입니다. LB Controller는 이 값이
+# gateway.k8s.aws/alb 인 GatewayClass만 자기 것으로 처리합니다.
+#   gateway.k8s.aws/alb → ALB (L7, HTTPRoute/GRPCRoute)
+#   gateway.k8s.aws/nlb → NLB (L4, TCPRoute/UDPRoute)
+#
+# [Ingress와의 차이 ①]
+# Ingress는 IngressClass가 있었지만 설정 대부분이 애노테이션 문자열로 들어갔습니다.
+# Gateway API는 타입이 있는 필드로 나뉘어 있어 오타를 미리 잡을 수 있습니다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: alb
+spec:
+  controllerName: gateway.k8s.aws/alb

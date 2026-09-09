@@ -1,0 +1,32 @@
+# ── HTTPRoute ──
+# "어떤 요청을 어느 Service로 보낼지"를 정의합니다. 앱팀의 영역입니다.
+#
+# parentRefs로 위 Gateway에 "붙습니다". 이 방향성이 중요합니다 —
+# Gateway가 Route를 나열하지 않고, Route가 Gateway를 가리킵니다.
+# 그래서 Gateway 소유자가 Route 목록을 관리할 필요가 없습니다.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: app-route
+  namespace: demo
+spec:
+  parentRefs:
+    - name: app-gateway
+      sectionName: http # 위 listener의 이름
+  rules:
+    # 규칙 1: /healthz 는 그대로 전달
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /healthz
+      backendRefs:
+        - name: myapp-deepagent-app
+          port: 80
+    # 규칙 2: 나머지 전부
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: myapp-deepagent-app
+          port: 80
