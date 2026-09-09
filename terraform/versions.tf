@@ -10,6 +10,13 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0" # 5.x 최신을 사용 (6.0 미만)
     }
+
+    # [Day 7] OIDC provider 등록 시 인증서 지문(thumbprint)을 계산하는 데 씁니다.
+    # IAM이 "이 OIDC 발급자를 신뢰한다"고 등록할 때 요구하는 값입니다.
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   # --------------------------------------------------------------------------

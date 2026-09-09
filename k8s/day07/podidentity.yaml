@@ -1,0 +1,12 @@
+# ── 방법 B: Pod Identity ──
+# 애노테이션이 없습니다. 평범한 ServiceAccount입니다.
+# "이 SA가 어느 역할을 쓰는가"는 쿠버네티스가 아니라 AWS 쪽
+# (aws_eks_pod_identity_association)에 적혀 있습니다.
+#
+# Day 4의 Access Entry와 같은 사고방식입니다 —
+# 매핑 정보를 클러스터 밖(AWS)에 두는 구조입니다.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: podid-demo
+  namespace: demo

@@ -119,3 +119,9 @@ variable "addon_version_coredns" {
   type        = string
   default     = "v1.14.3-eksbuild.14"
 }
+
+variable "addon_version_pod_identity" {
+  description = "EKS Pod Identity Agent 애드온 버전 (Day 7)"
+  type        = string
+  default     = "v1.4.0-eksbuild.2"
+}

@@ -81,3 +81,20 @@ output "addon_versions" {
     coredns    = aws_eks_addon.coredns.addon_version
   }
 }
+
+# ---------- IRSA / Pod Identity (Day 7) ----------
+
+output "oidc_provider_arn" {
+  description = "IAM에 등록된 클러스터 OIDC provider (IRSA의 전제)"
+  value       = aws_iam_openid_connect_provider.eks.arn
+}
+
+output "irsa_demo_role_arn" {
+  description = "IRSA 실습용 역할. ServiceAccount 애노테이션에 넣는 값."
+  value       = aws_iam_role.irsa_demo.arn
+}
+
+output "pod_identity_demo_role_arn" {
+  description = "Pod Identity 실습용 역할 (애노테이션 불필요)"
+  value       = aws_iam_role.pod_identity_demo.arn
+}
