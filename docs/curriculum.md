@@ -70,18 +70,20 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - 📄 상세: [day-05-ecr-helm.md](day-05-ecr-helm.md)
 
 ### Day 6 — 핵심 애드온 이해 🟢 (현재)
-- VPC CNI, CoreDNS, kube-proxy — EKS의 3대 필수 애드온
-- 파드가 VPC IP를 받는 원리 (VPC CNI, ENI/IP 워밍풀)
-- **VPC CNI를 쓸 때만 가능한 것들**: 파드 단위 보안그룹, ALB `target-type: ip`,
-  VPC Flow Logs에서 파드 트래픽 관측 → CNI 교체 시 무엇을 잃는지의 근거
+**CNI는 AWS VPC CNI를 사용합니다.** (검토 완료 — 이 리포는 VPC CNI로 확정)
 
-### Day 6-1 — CNI 교체: Cilium (선택 · 파괴적)
-EKS에서 CNI는 **교체 가능**합니다. 무엇을 얻고 무엇을 잃는지 직접 확인합니다.
-- **ENI 모드(완전 교체)** vs **체이닝 모드(VPC CNI 위에 얹기)** 비교
-- `kubeProxyReplacement` — eBPF로 Service 로드밸런싱, kube-proxy DaemonSet 제거
-- 잃는 것: 파드 단위 보안그룹, ALB `target-type: ip`, VPC Flow Logs 가시성
-- AWS 지원 범위 — Hybrid Nodes는 공식 지원, 일반 EKS는 "가능하지만 CNI는 지원 범위 밖"
-- ⚠️ 노드 재생성이 필요해 파괴적입니다. Day 6 이후 독립된 세션에서 진행하세요.
+- VPC CNI, CoreDNS, kube-proxy — EKS의 3대 필수 애드온
+- **파드가 VPC IP를 받는 원리** — ENI의 보조 IP를 파드 veth에 할당
+- **최대 파드 수 제약** — `(ENI 수 × (ENI당 IP − 1)) + 2`.
+  t4g.medium은 3×(6−1)+2 = **17개**. CPU·메모리가 남아도 IP가 없으면 Pending
+- **서브넷 IP 고갈** — 파드마다 VPC IP를 쓰므로 CIDR 사이징이 중요
+- **워밍풀** (`WARM_ENI_TARGET`) — 파드 기동 속도와 IP 낭비의 트레이드오프
+- **접두사 위임** (`ENABLE_PREFIX_DELEGATION`) — `/28` 블록 할당으로 최대 파드 수 확대
+- **VPC CNI라서 가능한 것들**: 파드 단위 보안그룹(`ENABLE_POD_ENI`),
+  ALB `target-type: ip`, VPC Flow Logs에서 파드 트래픽 관측
+- **kube-proxy** — ClusterIP가 실제 파드 IP로 바뀌는 경로 (iptables 체인)
+- **CoreDNS** — 서비스 디스커버리. 유일하게 DaemonSet이 아닌 Deployment인 이유
+- **관리형 애드온** — `aws_eks_addon`으로 버전을 명시적으로 고정·업그레이드
 
 ### Day 7 — IRSA / Pod Identity
 - 파드에 AWS 권한을 안전하게 부여하는 방법
@@ -131,7 +133,7 @@ EKS에서 CNI는 **교체 가능**합니다. 무엇을 얻고 무엇을 잃는�
 
 - GitOps (ArgoCD/Flux) — Day 5의 Helm 차트를 ArgoCD로 배포
 - 네트워크 정책 / 보안 (Network Policy, Pod Security Standards)
-- 서비스 메시 개요 — Cilium Service Mesh 포함 (Day 6-1과 연결)
+- 서비스 메시 개요
 - 비용 최적화 (Spot, 우측 사이징)
   - ~~Graviton~~ → ✅ **선행 적용**: Day 3 노드를 t4g.medium(arm64)으로 전환.
     맥북과 아키텍처가 일치해 빌드가 단순해지고 20% 저렴합니다

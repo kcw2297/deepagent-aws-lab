@@ -95,3 +95,27 @@ variable "node_disk_size" {
   type        = number
   default     = 20
 }
+
+# ---------- 애드온 (Day 6) ----------
+# 버전을 코드에 명시합니다. versions.tf에서 provider 버전을 고정한 것과 같은 이유로,
+# "어제 되던 게 오늘 안 되는" 상황을 막기 위해서입니다.
+# 사용 가능한 버전 확인:
+#   aws eks describe-addon-versions --addon-name vpc-cni --kubernetes-version 1.36
+
+variable "addon_version_vpc_cni" {
+  description = "VPC CNI 애드온 버전"
+  type        = string
+  default     = "v1.22.4-eksbuild.3"
+}
+
+variable "addon_version_kube_proxy" {
+  description = "kube-proxy 애드온 버전. 쿠버네티스 버전과 묶여 있습니다."
+  type        = string
+  default     = "v1.36.0-eksbuild.17"
+}
+
+variable "addon_version_coredns" {
+  description = "CoreDNS 애드온 버전"
+  type        = string
+  default     = "v1.14.3-eksbuild.14"
+}

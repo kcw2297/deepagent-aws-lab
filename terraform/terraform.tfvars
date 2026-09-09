@@ -22,3 +22,9 @@ node_desired_size  = 2
 node_min_size      = 1
 node_max_size      = 3
 node_disk_size     = 20
+
+# ---------- 애드온 (Day 6) ----------
+# 현재 클러스터에서 실행 중인 버전과 동일 → 편입해도 워크로드 재시작 없음
+addon_version_vpc_cni    = "v1.22.4-eksbuild.3"
+addon_version_kube_proxy = "v1.36.0-eksbuild.17"
+addon_version_coredns    = "v1.14.3-eksbuild.14"

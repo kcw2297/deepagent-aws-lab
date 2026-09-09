@@ -70,3 +70,14 @@ output "viewer_role_arn" {
   description = "읽기 전용 역할 ARN. `aws sts assume-role --role-arn <이 값>`으로 실험합니다."
   value       = aws_iam_role.viewer.arn
 }
+
+# ---------- 애드온 (Day 6) ----------
+
+output "addon_versions" {
+  description = "Terraform이 관리하는 애드온 버전 (업그레이드 시 여기를 바꾸고 apply)"
+  value = {
+    vpc_cni    = aws_eks_addon.vpc_cni.addon_version
+    kube_proxy = aws_eks_addon.kube_proxy.addon_version
+    coredns    = aws_eks_addon.coredns.addon_version
+  }
+}
