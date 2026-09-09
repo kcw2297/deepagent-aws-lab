@@ -61,7 +61,8 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 공개 이미지가 아니라 **내가 만든 이미지와 차트**를 EKS에 올립니다.
 - ECR 리포지토리 (Terraform) — 이미지용 + **차트용(OCI 아티팩트)**
 - `aws ecr get-login-password`가 왜 임시 토큰인지 (Day 4의 STS와 같은 맥락)
-- `docker build --platform linux/amd64` — **맥북 arm64 ↔ 노드 x86_64 불일치 함정**
+- 아키텍처 정합성 — 노드를 **Graviton(arm64)** 으로 맞춰 맥북과 일치시켰습니다.
+  덕분에 `--platform` 플래그가 불필요합니다 (불일치 시 `exec format error`)
 - `helm package` → `helm push oci://...` → `helm install oci://...`
 - 노드가 정말 ECR에서 pull하는지 확인 — **Day 3의 `ECRReadOnly` 정책 실증**
 - 이미지 태그 전략(`latest`가 위험한 이유), `imagePullPolicy`
@@ -129,8 +130,9 @@ EKS에서 CNI는 **교체 가능**합니다. 무엇을 얻고 무엇을 잃는�
 - GitOps (ArgoCD/Flux) — Day 5의 Helm 차트를 ArgoCD로 배포
 - 네트워크 정책 / 보안 (Network Policy, Pod Security Standards)
 - 서비스 메시 개요 — Cilium Service Mesh 포함 (Day 6-1과 연결)
-- 비용 최적화 (Spot, Graviton, 우측 사이징)
-  - Graviton으로 가면 Day 5의 `--platform` 문제가 사라집니다 (맥북 arm64와 일치)
+- 비용 최적화 (Spot, 우측 사이징)
+  - ~~Graviton~~ → ✅ **선행 적용**: Day 3 노드를 t4g.medium(arm64)으로 전환.
+    맥북과 아키텍처가 일치해 빌드가 단순해지고 20% 저렴합니다
 - 업그레이드 전략 (클러스터/노드 버전 업, 표준 지원 → 연장 지원 요금 급등 주의)
 
 ---

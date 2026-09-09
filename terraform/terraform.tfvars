@@ -15,7 +15,9 @@ kubernetes_version          = "1.36"
 cluster_public_access_cidrs = ["0.0.0.0/0"]
 
 # ---------- 노드 그룹 (Day 3) ----------
-node_instance_type = "t3.medium"
+# Graviton(arm64) — 개발 머신 아키텍처와 일치시켜 --platform 문제를 없앱니다
+node_instance_type = "t4g.medium"
+node_ami_type      = "AL2023_ARM_64_STANDARD"
 node_desired_size  = 2
 node_min_size      = 1
 node_max_size      = 3

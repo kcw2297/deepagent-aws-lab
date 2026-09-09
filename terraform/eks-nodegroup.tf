@@ -85,7 +85,16 @@ resource "aws_eks_node_group" "this" {
   subnet_ids = aws_subnet.private[*].id
 
   # AL2023 = Amazon Linux 2023. EKS 1.33부터 구형 AL2는 지원되지 않습니다.
-  ami_type       = "AL2023_x86_64_STANDARD"
+  #
+  # [아키텍처 — 의도적으로 arm64를 씁니다]
+  # 개발 머신이 Apple Silicon(arm64)이라 노드도 Graviton(arm64)으로 맞췄습니다.
+  #   · docker build 시 --platform 플래그가 불필요해집니다
+  #     (아키텍처가 다르면 파드가 `exec format error`로 죽습니다)
+  #   · 크로스 컴파일이 아니라 네이티브 빌드라 더 빠릅니다
+  #   · 같은 사양에 20% 저렴합니다 (서울: t3.medium $0.052/h → t4g.medium $0.0416/h)
+  # 대가: 드물게 arm64 빌드가 없는 서드파티 이미지를 만날 수 있습니다.
+  # x86으로 되돌리려면 ami_type을 AL2023_x86_64_STANDARD, 인스턴스를 t3.medium으로.
+  ami_type       = var.node_ami_type
   instance_types = [var.node_instance_type]
   disk_size      = var.node_disk_size
 

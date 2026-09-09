@@ -56,9 +56,20 @@ variable "cluster_public_access_cidrs" {
 # ---------- 노드 그룹 (Day 3) ----------
 
 variable "node_instance_type" {
-  description = "워커 노드 EC2 인스턴스 타입. t3.medium이 EKS 학습용 최소 실용 사양입니다."
+  description = "워커 노드 EC2 인스턴스 타입. 개발 머신(Apple Silicon)과 맞추려고 Graviton(arm64)을 씁니다."
   type        = string
-  default     = "t3.medium"
+  default     = "t4g.medium"
+}
+
+variable "node_ami_type" {
+  description = "노드 AMI 타입. instance_type의 아키텍처와 반드시 일치해야 합니다 (arm64 ↔ ARM_64)."
+  type        = string
+  default     = "AL2023_ARM_64_STANDARD"
+
+  validation {
+    condition     = contains(["AL2023_ARM_64_STANDARD", "AL2023_x86_64_STANDARD"], var.node_ami_type)
+    error_message = "AL2023_ARM_64_STANDARD 또는 AL2023_x86_64_STANDARD만 사용합니다."
+  }
 }
 
 variable "node_desired_size" {
