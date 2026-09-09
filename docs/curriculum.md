@@ -69,7 +69,7 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - push해도 자동 배포되지 않는 이유 → GitOps가 필요한 지점
 - 📄 상세: [day-05-ecr-helm.md](day-05-ecr-helm.md)
 
-### Day 6 — 핵심 애드온 이해 🟢 (현재)
+### Day 6 — 핵심 애드온 이해 ✅
 **CNI는 AWS VPC CNI를 사용합니다.** (검토 완료 — 이 리포는 VPC CNI로 확정)
 
 - VPC CNI, CoreDNS, kube-proxy — EKS의 3대 필수 애드온
@@ -84,8 +84,10 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - **kube-proxy** — ClusterIP가 실제 파드 IP로 바뀌는 경로 (iptables 체인)
 - **CoreDNS** — 서비스 디스커버리. 유일하게 DaemonSet이 아닌 Deployment인 이유
 - **관리형 애드온** — `aws_eks_addon`으로 버전을 명시적으로 고정·업그레이드
+  (자동 설치돼 있지만 등록 전에는 자체 관리 상태. 등록은 "관리 방식 전환")
+- 📄 상세: [day-06-addons.md](day-06-addons.md)
 
-### Day 7 — IRSA / Pod Identity
+### Day 7 — IRSA / Pod Identity 🟢 (현재)
 - 파드에 AWS 권한을 안전하게 부여하는 방법
 - OIDC provider, `aws_iam_role`의 신뢰 정책
 - **왜 필요한가**: 지금은 노드 역할의 권한을 그 노드의 모든 파드가 공유합니다
