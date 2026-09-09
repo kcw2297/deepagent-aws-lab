@@ -87,14 +87,17 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
   (자동 설치돼 있지만 등록 전에는 자체 관리 상태. 등록은 "관리 방식 전환")
 - 📄 상세: [day-06-addons.md](day-06-addons.md)
 
-### Day 7 — IRSA / Pod Identity 🟢 (현재)
-- 파드에 AWS 권한을 안전하게 부여하는 방법
-- OIDC provider, `aws_iam_role`의 신뢰 정책
-- **왜 필요한가**: 지금은 노드 역할의 권한을 그 노드의 모든 파드가 공유합니다
-  (Day 3에서 확인한 문제)
-- IRSA vs EKS Pod Identity 비교
+### Day 7 — IRSA / Pod Identity ✅
+파드에 AWS 권한을 **파드 단위로** 부여합니다.
+- **IMDS와 홉 제한** — 일반 파드에 자격증명이 없는 이유 (TTL=1로 차단)
+- **ServiceAccount** — 파드의 신원. 토큰의 `iss`/`sub`/`aud`
+- **IRSA** — OIDC provider 등록 + `sts:AssumeRoleWithWebIdentity` + `sub` 조건
+- **Pod Identity** — 에이전트 + association. OIDC·애노테이션 불필요
+- 두 방식 비교 — 주입 환경변수, 세션 이름(CloudTrail 추적), 재사용성
+- 실습: SA 없음 / IRSA / Pod Identity 세 파드를 나란히 비교
+- 📄 상세: [day-07-irsa-pod-identity.md](day-07-irsa-pod-identity.md)
 
-### Day 8 — Gateway API + AWS Load Balancer Controller
+### Day 8 — Gateway API + AWS Load Balancer Controller 🟢 (현재)
 **Ingress가 아니라 Gateway API로 갑니다.**
 - Ingress API는 **동결(frozen)** 상태 — GA지만 신규 기능이 들어가지 않습니다
 - AWS Load Balancer Controller가 **2026년 초 Gateway API GA 지원** (LBC v3.4.0)

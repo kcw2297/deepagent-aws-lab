@@ -265,7 +265,8 @@ CoreDNS에만 `depends_on = [aws_eks_node_group.this]`를 걸었습니다 —
 
 ## 다음 (Day 7)
 
-Day 3에서 확인한 문제 — **노드 역할의 권한을 그 노드의 모든 파드가 공유**하는 구조 —
-를 해결합니다. IRSA/Pod Identity로 파드별 권한을 부여합니다.
+파드에 AWS 권한을 **파드 단위로** 주는 방법입니다.
+일반 파드는 기본적으로 AWS 자격증명이 **아예 없습니다**
+(IMDS 홉 제한 1에 막힘 — Day 7에서 확인). IRSA/Pod Identity로 해결합니다.
 Day 5에서 본 ServiceAccount 토큰의 발급자
 (`https://oidc.eks.ap-northeast-2.amazonaws.com/id/...`)가 그 열쇠입니다.
