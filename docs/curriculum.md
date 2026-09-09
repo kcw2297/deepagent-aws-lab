@@ -57,7 +57,7 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 > **전제**: Namespace / Deployment / Service / Pod 같은 기본 오브젝트는 이미 아는 것으로 봅니다.
 > 그래서 "첫 워크로드 배포" 같은 입문 단계는 건너뛰고, **EKS 고유의 문제**에 집중합니다.
 
-### Day 5 — ECR + Helm으로 내 앱 배포 🟢 (현재)
+### Day 5 — ECR + Helm으로 내 앱 배포 ✅
 공개 이미지가 아니라 **내가 만든 이미지와 차트**를 EKS에 올립니다.
 - ECR 리포지토리 (Terraform) — 이미지용 + **차트용(OCI 아티팩트)**
 - `aws ecr get-login-password`가 왜 임시 토큰인지 (Day 4의 STS와 같은 맥락)
@@ -65,9 +65,11 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
   덕분에 `--platform` 플래그가 불필요합니다 (불일치 시 `exec format error`)
 - `helm package` → `helm push oci://...` → `helm install oci://...`
 - 노드가 정말 ECR에서 pull하는지 확인 — **Day 3의 `ECRReadOnly` 정책 실증**
-- 이미지 태그 전략(`latest`가 위험한 이유), `imagePullPolicy`
+- 이미지 태그 전략(`latest`가 위험한 이유), `imagePullPolicy` 캐시 함정
+- push해도 자동 배포되지 않는 이유 → GitOps가 필요한 지점
+- 📄 상세: [day-05-ecr-helm.md](day-05-ecr-helm.md)
 
-### Day 6 — 핵심 애드온 이해
+### Day 6 — 핵심 애드온 이해 🟢 (현재)
 - VPC CNI, CoreDNS, kube-proxy — EKS의 3대 필수 애드온
 - 파드가 VPC IP를 받는 원리 (VPC CNI, ENI/IP 워밍풀)
 - **VPC CNI를 쓸 때만 가능한 것들**: 파드 단위 보안그룹, ALB `target-type: ip`,
