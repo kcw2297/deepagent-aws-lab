@@ -1,0 +1,39 @@
+# ── TargetGroupConfiguration (AWS 확장) ──
+# ALB가 트래픽을 "어디로" 보낼지의 세부 설정입니다.
+#
+# [왜 필요했나 — 실제로 막혔던 지점]
+# 이 리소스 없이 Gateway를 만들면 컨트롤러가 이런 에러를 냅니다:
+#   TargetGroup port is empty. When using Instance targets,
+#   your service must be of type 'NodePort' or 'LoadBalancer'
+#
+# 기본 targetType이 instance인데, instance 모드는 노드의 NodePort로 보내는 방식이라
+# Service가 NodePort/LoadBalancer 타입이어야 합니다. 우리 Service는 ClusterIP라 실패했습니다.
+#
+# [해결: targetType: ip]
+# ALB가 노드를 거치지 않고 **파드 IP로 직접** 보냅니다.
+#   instance : ALB → 노드:NodePort → (kube-proxy iptables) → 파드     홉 2번
+#   ip       : ALB → 파드 IP                                          홉 1번
+#
+# 이게 가능한 이유가 Day 6의 VPC CNI입니다 — 파드가 진짜 VPC IP를 갖기 때문에
+# ALB가 그 IP를 타깃으로 등록할 수 있습니다. 오버레이 네트워크였다면 불가능합니다.
+apiVersion: gateway.k8s.aws/v1
+kind: TargetGroupConfiguration
+metadata:
+  name: app-tg-config
+  namespace: demo
+spec:
+  # 어느 Service에 대한 설정인지 지정합니다.
+  targetReference:
+    kind: Service
+    name: myapp-deepagent-app
+  defaultConfiguration:
+    targetType: ip
+    protocol: HTTP
+    protocolVersion: HTTP1
+    healthCheckConfig:
+      healthCheckPath: /healthz
+      healthCheckProtocol: HTTP
+      healthCheckInterval: 15
+      healthCheckTimeout: 5
+      healthyThresholdCount: 2
+      unhealthyThresholdCount: 2

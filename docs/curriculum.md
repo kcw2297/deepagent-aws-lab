@@ -97,7 +97,7 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - 실습: SA 없음 / IRSA / Pod Identity 세 파드를 나란히 비교
 - 📄 상세: [day-07-irsa-pod-identity.md](day-07-irsa-pod-identity.md)
 
-### Day 8 — Gateway API + AWS Load Balancer Controller 🟢 (현재)
+### Day 8 — Gateway API + AWS Load Balancer Controller ✅
 **Ingress가 아니라 Gateway API로 갑니다.**
 - Ingress API는 **동결(frozen)** 상태 — GA지만 신규 기능이 들어가지 않습니다
 - AWS Load Balancer Controller가 **2026년 초 Gateway API GA 지원** (LBC v3.4.0)
@@ -106,12 +106,18 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
   (역할 분리: 인프라팀은 Gateway, 앱팀은 Route)
 - Helm으로 컨트롤러 설치 → Gateway API로 ALB 자동 생성
 - Ingress는 **비교·마이그레이션 관점으로만** 다룹니다
+- `targetType: ip` — ALB가 파드 IP로 직접 라우팅 (Day 6 VPC CNI의 이점)
+- 컨트롤러는 트래픽 경로에 없다 (설정 흐름 vs 트래픽 흐름 분리)
+- ⚠️ ALB는 Terraform state 밖 — **정리 순서가 중요**
+- 📄 상세: [day-08-gateway-api.md](day-08-gateway-api.md)
+
+> **Phase 1 완료** — 앱 배포 → 애드온 이해 → 파드 권한 → 인터넷 노출까지 마쳤습니다.
 
 ---
 
 ## Phase 2 — 운영 심화
 
-### Day 9 — 스토리지 (EBS/EFS CSI)
+### Day 9 — 스토리지 (EBS/EFS CSI) 🟢 (현재)
 - PersistentVolume / PVC / StorageClass
 - EBS CSI 드라이버로 동적 볼륨 프로비저닝
 - CSI 드라이버가 IRSA를 쓰는 구조 (Day 7과 연결)
