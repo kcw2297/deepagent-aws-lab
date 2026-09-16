@@ -162,6 +162,49 @@ kubectl get nodes
 
 **Access Entry는 "파악"이 아니라 "번역"입니다.** 신원 확인은 ②에서 STS가 끝냅니다.
 
+### 4-1. 인가 평가 — **RoleBinding은 만들어지지 않습니다**
+
+흐름의 ④단계를 이렇게 상상하기 쉽습니다.
+
+```
+❌ 상상: Access Entry를 보고 → ClusterRoleBinding을 생성 → RBAC이 그걸 읽음
+```
+
+**아닙니다. 클러스터에 아무것도 쓰이지 않습니다.** 실습 8단계에서 확인됩니다.
+
+```bash
+kubectl get clusterrolebindings | grep -i viewer
+# → 없음
+```
+
+viewer 역할이 `list pods`를 성공했는데도 **그 역할을 가리키는 바인딩이 클러스터에 존재하지 않습니다.**
+
+```
+✅ 실제: 요청이 올 때마다 → EKS 인가 웹훅이 Access Entry + 연결된 정책을 직접 평가
+```
+
+Access Entry가 AWS 쪽에 사는 것과 같은 맥락입니다 —
+**매핑도 권한 부여도 클러스터 밖에서 관리되고, 클러스터 안에는 흔적이 남지 않습니다.**
+
+#### 단, 그룹 매핑 경로는 다릅니다
+
+| 경로 | 클러스터 안에 바인딩이 있나 |
+|------|---------------------------|
+| **액세스 정책 연결** | ❌ 없음. EKS 웹훅이 직접 평가 |
+| **그룹 매핑** (`kubernetesGroups`) | ✅ 있음. 그 그룹에 대한 RBAC 바인딩 |
+
+`system:nodes`처럼 쿠버네티스 **내장 그룹**에 넣으면, 그 그룹에 대한 ClusterRoleBinding이
+쿠버네티스가 기본 제공하는 것으로 이미 존재합니다.
+Day 3의 노드 역할이 이 경로라서 **연결된 정책이 `[]`인데도** 동작했습니다.
+
+#### 흔한 오해 셋을 한 번에 정리
+
+| 오해 | 실제 |
+|------|------|
+| "토큰 발급 시 AWS를 호출한다" | **로컬 서명만.** IAM 권한 0개로도 발급됨 (Q3 참고) |
+| "STS가 Access Entry를 참조한다" | **STS는 쿠버네티스를 모름.** 서명 검증해 ARN만 반환. 조회 주체는 **EKS** |
+| "Access Entry에 정책이 담겨 있다" | **없음.** `username`/`k8sGroups`/`type`만. 정책은 별개 association |
+
 ### 5. 표준 쿠버네티스인가, EKS 전용인가
 
 **골격은 표준, 내용물이 EKS 전용**입니다.
@@ -407,6 +450,18 @@ policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSAdminViewPolicy"
 다른 방법으로, 액세스 정책 대신 `kubernetes_groups`로 그룹에 넣고
 직접 만든 `ClusterRole`/`ClusterRoleBinding`을 쓸 수도 있습니다
 (Day 3의 노드 역할이 `system:nodes`로 그렇게 동작합니다).
+
+### Q5. Access Entry가 ClusterRoleBinding을 만들어주나요?
+
+**아닙니다.** 실습 8단계에서 `kubectl get clusterrolebindings | grep -i viewer`가
+아무것도 반환하지 않는 것으로 확인됩니다.
+
+EKS 인가 웹훅이 **요청마다 Access Entry와 연결된 정책을 직접 평가**하고,
+쿠버네티스 오브젝트로 구체화하지 않습니다.
+
+예외는 **그룹 매핑 경로**입니다 — `system:nodes` 같은 내장 그룹에 넣으면
+쿠버네티스가 기본 제공하는 바인딩이 이미 클러스터에 존재합니다.
+자세히: [4-1절](#4-1-인가-평가--rolebinding은-만들어지지-않습니다)
 
 ## 범위를 더 좁히려면
 
