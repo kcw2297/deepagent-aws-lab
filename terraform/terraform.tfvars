@@ -35,3 +35,9 @@ addon_version_ebs_csi = "v1.66.0-eksbuild.1"
 
 # ---------- 오토스케일링 (Day 10) ----------
 addon_version_metrics_server = "v0.9.0-eksbuild.11"
+
+# ---------- 관측성 (Day 11) ----------
+# 학습용이라 5종을 모두 켜고 비교합니다. 운영에서는 audit·authenticator만 켜는 경우가 많습니다
+cluster_log_types                      = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+log_retention_days                     = 1
+addon_version_cloudwatch_observability = "v6.6.0-eksbuild.1"

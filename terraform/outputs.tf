@@ -119,3 +119,18 @@ output "cluster_autoscaler_role_arn" {
   description = "Cluster Autoscaler가 쓰는 IAM 역할 (Pod Identity로 연결됨)"
   value       = aws_iam_role.cluster_autoscaler.arn
 }
+
+# ---------- 관측성 (Day 11) ----------
+
+output "cloudwatch_agent_role_arn" {
+  description = "CloudWatch Agent·Fluent Bit이 쓰는 IAM 역할 (애드온에 Pod Identity로 연결됨)"
+  value       = aws_iam_role.cloudwatch_agent.arn
+}
+
+output "log_group_names" {
+  description = "Terraform이 관리하는 CloudWatch 로그 그룹 (보관 기간 지정, destroy 시 삭제)"
+  value = concat(
+    [aws_cloudwatch_log_group.eks_cluster.name],
+    [for g in aws_cloudwatch_log_group.container_insights : g.name],
+  )
+}

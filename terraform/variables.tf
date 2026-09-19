@@ -141,3 +141,23 @@ variable "addon_version_metrics_server" {
   type        = string
   default     = "v0.9.0-eksbuild.11"
 }
+
+# ---------- 관측성 (Day 11) ----------
+
+variable "cluster_log_types" {
+  description = "CloudWatch로 보낼 컨트롤플레인 로그 종류"
+  type        = list(string)
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch 로그 그룹 보관 기간(일). 학습용이라 짧게"
+  type        = number
+  default     = 1
+}
+
+variable "addon_version_cloudwatch_observability" {
+  description = "amazon-cloudwatch-observability 애드온 버전 (Container Insights + Fluent Bit)"
+  type        = string
+  default     = "v6.6.0-eksbuild.1"
+}

@@ -87,13 +87,26 @@ resource "aws_eks_cluster" "this" {
     bootstrap_cluster_creator_admin_permissions = true
   }
 
-  # [학습 노트] 컨트롤플레인 로그(api, audit 등)를 CloudWatch로 보낼 수 있지만
-  # 수집·보관 비용이 별도로 붙어서 지금은 끕니다. Day 11(관측성)에서 다룹니다.
-  # enabled_cluster_log_types = ["api", "audit"]
+  # [컨트롤플레인 로그 — Day 11에서 켬]
+  # Day 2에서는 수집·보관 비용 때문에 꺼두었습니다.
+  # 컨트롤플레인은 AWS가 운영해서 우리가 들어가 볼 수 없고, 이 로그가 유일한 창입니다.
+  #   api               : API 서버 동작
+  #   audit             : "누가 언제 무엇을" — Day 10 HPA가 replicas를 바꾼 기록이 여기 남습니다
+  #   authenticator     : IAM 주체 → k8s 사용자 매핑 (Day 4 Access Entry)
+  #   controllerManager : 컨트롤러들 (HPA도 여기 안에서 돕니다)
+  #   scheduler         : 스케줄러
+  # 받을 곳은 /aws/eks/<cluster>/cluster 로그 그룹 (eks-observability.tf에서 먼저 만듦)
+  enabled_cluster_log_types = var.cluster_log_types
 
   # 역할에 정책이 붙기 전에 클러스터를 만들면 실패합니다.
   # Terraform은 role_arn 참조로 역할 자체의 순서는 알지만, 정책 부착 순서는 모릅니다.
-  depends_on = [aws_iam_role_policy_attachment.cluster_eks_policy]
+  #
+  # 로그 그룹도 먼저 있어야 합니다. 없으면 EKS가 "무기한 보관" 그룹을 직접 만들고,
+  # 그건 Terraform이 모르는 리소스라 destroy 후에도 남습니다 (Day 11).
+  depends_on = [
+    aws_iam_role_policy_attachment.cluster_eks_policy,
+    aws_cloudwatch_log_group.eks_cluster,
+  ]
 
   tags = {
     Name = "${var.project}-cluster"

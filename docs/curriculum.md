@@ -140,12 +140,18 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - Karpenter는 심화 주제로 미룸
 - 📄 상세: [day-10-autoscaling.md](day-10-autoscaling.md)
 
-### Day 11 — 관측성 (Observability) 🟢 (현재)
-- CloudWatch Container Insights / metrics-server
-- 컨트롤플레인 로그 (`enabled_cluster_log_types`) — Day 2에서 비용 때문에 꺼둔 것
-- 로그/메트릭 수집 구조
+### Day 11 — 관측성 (Observability) ✅
+클러스터에서 일어난 일을 클러스터 밖(CloudWatch)에 기록으로 남깁니다.
+- 컨트롤플레인 로그 5종 (`enabled_cluster_log_types`) — Day 2에서 비용 때문에 꺼둔 것
+- Container Insights 애드온 = CloudWatch Agent(메트릭) + Fluent Bit(로그), Pod Identity
+- **로그 그룹을 Terraform으로 먼저 생성** — 안 그러면 무기한 보관 + state 밖 고아
+- 애드온 기본값 정리 (Application Signals 자동 주입, node-exporter requests 끄기)
+- 실습: 사라진 노드의 로그가 남음 / audit로 HPA·CA·node-controller 신원과 순서 재구성
+- 발견: 관측 도구도 requests를 먹는다 / `@timestamp`는 전달 시각일 수 있다
+- Prometheus/Grafana는 심화 주제로 미룸 (CloudWatch와의 역할 분담은 노트에 정리)
+- 📄 상세: [day-11-observability.md](day-11-observability.md)
 
-### Day 12 — 리팩터링: 모듈화 & 환경 분리
+### Day 12 — 리팩터링: 모듈화 & 환경 분리 🟢 (현재)
 - 지금까지의 코드를 Terraform 모듈로 정리
 - 여러 환경(dev/prod) 구성 전략 — 백엔드 `key`를 나누거나 workspace 활용
 - ~~S3 원격 백엔드로 state 관리~~ → ✅ **선행 완료**: [remote-state.md](remote-state.md)
@@ -159,6 +165,7 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - 네트워크 정책 / 보안 (Network Policy, Pod Security Standards)
 - 서비스 메시 개요
 - Karpenter — Day 10 Cluster Autoscaler와 비교 (ASG 없이 인스턴스를 직접 생성)
+- Prometheus / Grafana — Day 11 CloudWatch와 비교 (클러스터 안 메트릭은 Prometheus, AWS 리소스는 CloudWatch)
 - 비용 최적화 (Spot, 우측 사이징)
   - ~~Graviton~~ → ✅ **선행 적용**: Day 3 노드를 t4g.medium(arm64)으로 전환.
     맥북과 아키텍처가 일치해 빌드가 단순해지고 20% 저렴합니다
