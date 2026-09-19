@@ -105,3 +105,10 @@ output "alb_controller_role_arn" {
   description = "LB Controller가 쓰는 IAM 역할 (Pod Identity로 연결됨)"
   value       = aws_iam_role.alb_controller.arn
 }
+
+# ---------- 스토리지 (Day 9) ----------
+
+output "ebs_csi_role_arn" {
+  description = "EBS CSI 컨트롤러가 쓰는 IAM 역할 (애드온에 Pod Identity로 연결됨)"
+  value       = aws_iam_role.ebs_csi.arn
+}

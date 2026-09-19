@@ -125,3 +125,11 @@ variable "addon_version_pod_identity" {
   type        = string
   default     = "v1.4.0-eksbuild.2"
 }
+
+# ---------- 스토리지 (Day 9) ----------
+
+variable "addon_version_ebs_csi" {
+  description = "EBS CSI 드라이버 애드온 버전"
+  type        = string
+  default     = "v1.66.0-eksbuild.1"
+}

@@ -1,0 +1,79 @@
+# ── Day 9 실습: 파드가 죽어도 데이터가 살아남는가 ──
+#
+# PVC 1Gi를 만들고, 5초마다 시각을 파일에 추가하는 파드에 붙입니다.
+# 파드를 지워도 Deployment가 새 파드를 띄우고, 새 파드는 같은 볼륨을 붙이므로
+# 이전 기록이 그대로 남아 있어야 합니다.
+#
+# [관찰 포인트]
+#  · PVC 생성 직후는 Pending — WaitForFirstConsumer라 파드를 기다림 (정상)
+#  · 파드가 뜨면 그 노드의 AZ에 EBS 볼륨이 생김
+#  · 파드를 지우면 새 파드가 "같은 AZ의 노드"로만 감 — EBS가 AZ에 묶여 있어서
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pvc
+  namespace: demo
+spec:
+  # 기본 StorageClass(gp3)가 있으므로 생략해도 되지만, 학습용으로 명시합니다.
+  storageClassName: gp3
+  accessModes:
+    # RWO = 한 번에 한 "노드"만 마운트. "파드 하나"가 아닙니다!
+    # 같은 노드의 파드 여럿은 동시에 마운트할 수 있습니다.
+    # 실습에서 옛 파드와 새 파드가 같은 노드에 있어 26초간 동시에 썼습니다.
+    #   ReadWriteOnce    (RWO)  : 노드 하나
+    #   ReadWriteOncePod (RWOP) : 파드 하나 (1.29 GA) — DB라면 이걸 고려
+    #   ReadWriteMany    (RWX)  : 여러 노드 — EBS는 불가, EFS 필요
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: writer
+  namespace: demo
+spec:
+  replicas: 1
+  # Recreate = 롤아웃(템플릿 변경) 시 옛 파드를 완전히 내린 뒤 새 파드를 띄움.
+  # RollingUpdate면 새 파드가 다른 노드에 뜰 때 Multi-Attach 에러가 날 수 있습니다.
+  #
+  # ⚠️ 이건 롤아웃에만 적용됩니다. `kubectl delete pod`로 직접 지우면
+  #    ReplicaSet이 옛 파드의 종료를 기다리지 않고 즉시 새 파드를 만듭니다.
+  #    실습에서 이 때문에 두 파드가 겹쳤습니다.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: { app: writer }
+  template:
+    metadata:
+      labels: { app: writer }
+    spec:
+      containers:
+        - name: writer
+          image: public.ecr.aws/docker/library/busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            # trap: SIGTERM을 받으면 즉시 종료.
+            # 이게 없으면 PID 1인 sh가 SIGTERM을 무시해서, 파드 삭제 시
+            # terminationGracePeriodSeconds(기본 30초)를 꽉 채워 쓰다가 SIGKILL로 죽습니다.
+            # 실습 첫 실행에서 옛 파드가 정확히 30초 더 살아 있었던 이유입니다.
+            - |
+              trap 'echo "=== 종료 신호 수신: $(hostname) ===" >> /data/log.txt; exit 0' TERM
+              echo "=== 파드 시작: $(hostname) on $NODE ===" >> /data/log.txt
+              while true; do
+                echo "$(date -u +%H:%M:%S) $(hostname)" >> /data/log.txt
+                sleep 5 &
+                wait $!
+              done
+          env:
+            - name: NODE
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: data-pvc

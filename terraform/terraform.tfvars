@@ -29,3 +29,6 @@ addon_version_vpc_cni      = "v1.22.4-eksbuild.3"
 addon_version_kube_proxy   = "v1.36.0-eksbuild.17"
 addon_version_coredns      = "v1.14.3-eksbuild.14"
 addon_version_pod_identity = "v1.4.0-eksbuild.2"
+
+# ---------- 스토리지 (Day 9) ----------
+addon_version_ebs_csi = "v1.66.0-eksbuild.1"

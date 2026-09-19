@@ -117,12 +117,18 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 
 ## Phase 2 — 운영 심화
 
-### Day 9 — 스토리지 (EBS/EFS CSI) 🟢 (현재)
-- PersistentVolume / PVC / StorageClass
-- EBS CSI 드라이버로 동적 볼륨 프로비저닝
-- CSI 드라이버가 IRSA를 쓰는 구조 (Day 7과 연결)
+### Day 9 — 스토리지 (EBS CSI) ✅
+파드가 죽어도 데이터가 살아남게 합니다.
+- PersistentVolume / PVC / StorageClass — `provisioner`는 이름표일 뿐, 드라이버는 따로 설치
+- EKS 기본 `gp2`(in-tree, immutable) 대신 CSI 기반 `gp3` StorageClass를 기본값으로
+- `volumeBindingMode` — `WaitForFirstConsumer`로 AZ 불일치 방지 (EBS는 AZ에 묶임)
+- 드라이버 = controller(AWS 원격 작업) + node(노드 로컬 마운트). CNI(바이너리)와 CSI(gRPC 서비스)의 차이
+- 관리형 애드온 안에서 Pod Identity를 바로 연결 (Day 8의 별도 association과 대비)
+- 실습에서 발견: RWO는 **노드** 단위 / Recreate는 롤아웃에만 / SIGTERM 처리의 효과
+- `make destroy`에 PVC 정리 단계 추가 (EBS도 Terraform state 밖)
+- 📄 상세: [day-09-storage.md](day-09-storage.md)
 
-### Day 10 — 오토스케일링
+### Day 10 — 오토스케일링 🟢 (현재)
 - HPA(파드 수평 확장)
 - **Cluster Autoscaler vs Karpenter** — Day 3에서 본 ASG를 쓰는 쪽과 안 쓰는 쪽
 - Terraform과 오토스케일러의 `desired_size` 충돌 → `ignore_changes`
