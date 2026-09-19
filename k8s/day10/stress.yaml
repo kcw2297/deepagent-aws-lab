@@ -1,0 +1,80 @@
+# ── Day 10 실습: HPA → Pending → Cluster Autoscaler ──
+#
+# CPU를 계속 태우는 파드를 HPA로 늘려서, 노드가 모자라게 만들고,
+# Cluster Autoscaler가 노드를 추가하는 사슬 전체를 봅니다.
+#
+# [숫자 설계]
+#   파드 1개 요청: CPU 400m
+#   HPA 최대    : 10개 → 총 4000m 필요
+#   기존 노드   : 시스템 파드 requests 때문에 노드당 3개 → 6개
+#   → 4개 Pending → 노드 3번째 추가 → 새 노드에 4개 → 전부 배치
+#   (실습 결과. 계산보다 kubectl describe nodes 의 Allocated resources가 정확합니다)
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: scale-demo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stress
+  namespace: scale-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: stress }
+  template:
+    metadata:
+      labels: { app: stress }
+    spec:
+      containers:
+        - name: stress
+          image: public.ecr.aws/docker/library/busybox:1.36
+          command: ["sh", "-c"]
+          # CPU를 무한히 태웁니다. limit 400m에 막혀 항상 요청의 100%를 씁니다.
+          # trap은 Day 9에서 배운 것 — 축소 시 30초를 채우지 않고 바로 종료합니다.
+          args:
+            - trap 'exit 0' TERM; while true; do :; done
+          resources:
+            # requests: 스케줄러가 "이 파드를 놓을 자리가 있나"를 계산하는 근거.
+            #           Cluster Autoscaler도 이 값으로 "새 노드가 필요한가"를 판단합니다.
+            #           requests가 없으면 오토스케일링이 제대로 동작하지 않습니다.
+            requests:
+              cpu: 400m
+              memory: 32Mi
+            # limits: 실제로 쓸 수 있는 상한. 여기서는 requests와 같게 둬서
+            #         사용률이 항상 100%가 되게 했습니다 (HPA 동작을 예측 가능하게).
+            limits:
+              cpu: 400m
+              memory: 64Mi
+---
+# ── HPA ──
+# 파드들의 평균 CPU 사용률이 requests 대비 50%를 넘으면 파드를 늘립니다.
+#
+# [계산]
+#   원하는 파드 수 = 현재 파드 수 × (현재 사용률 / 목표 사용률)
+#   = 1 × (100% / 50%) = 2 → 다음 판단에 4 → 8 → 10(최대)
+# 사용률이 항상 100%라 계속 두 배씩 늘어 금방 최대치에 닿습니다.
+#
+# HPA는 노드가 모자라도 신경 쓰지 않습니다. 파드 개수만 정할 뿐이고,
+# 그 파드들이 실제로 뜰 수 있는지는 스케줄러와 Cluster Autoscaler의 몫입니다.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: stress
+  namespace: scale-demo
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: stress
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50

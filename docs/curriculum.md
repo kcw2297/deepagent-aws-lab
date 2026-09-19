@@ -128,12 +128,19 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - `make destroy`에 PVC 정리 단계 추가 (EBS도 Terraform state 밖)
 - 📄 상세: [day-09-storage.md](day-09-storage.md)
 
-### Day 10 — 오토스케일링 🟢 (현재)
-- HPA(파드 수평 확장)
-- **Cluster Autoscaler vs Karpenter** — Day 3에서 본 ASG를 쓰는 쪽과 안 쓰는 쪽
-- Terraform과 오토스케일러의 `desired_size` 충돌 → `ignore_changes`
+### Day 10 — 오토스케일링 ✅
+부하에 따라 파드와 노드가 스스로 늘고 줄게 합니다.
+- **HPA는 파드, Cluster Autoscaler는 노드** — 둘은 직접 대화하지 않고 **Pending 파드**로만 이어진다
+- metrics-server(애드온)가 HPA의 전제. 사용률은 노드가 아니라 **파드 requests 대비**
+- CA는 CPU가 아니라 **스케줄 실패**를 보고, requests 기준으로 시뮬레이션한다
+- ASG 태그로 자동 탐색 + 같은 태그로 IAM 권한 제한 (Pod Identity, 정책 직접 작성)
+- Terraform과 `desired_size` 충돌 → `ignore_changes` (min/max는 Terraform, desired는 CA)
+- 실습: Pending → 약 45초 만에 노드 추가 / 축소는 emptyDir 파드 때문에 **새 노드만**
+- 실습에서 발견: 롤링 업데이트는 옛 파드도 세서 분산이 틀어진다 (`matchLabelKeys`)
+- Karpenter는 심화 주제로 미룸
+- 📄 상세: [day-10-autoscaling.md](day-10-autoscaling.md)
 
-### Day 11 — 관측성 (Observability)
+### Day 11 — 관측성 (Observability) 🟢 (현재)
 - CloudWatch Container Insights / metrics-server
 - 컨트롤플레인 로그 (`enabled_cluster_log_types`) — Day 2에서 비용 때문에 꺼둔 것
 - 로그/메트릭 수집 구조
@@ -151,6 +158,7 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - GitOps (ArgoCD/Flux) — Day 5의 Helm 차트를 ArgoCD로 배포
 - 네트워크 정책 / 보안 (Network Policy, Pod Security Standards)
 - 서비스 메시 개요
+- Karpenter — Day 10 Cluster Autoscaler와 비교 (ASG 없이 인스턴스를 직접 생성)
 - 비용 최적화 (Spot, 우측 사이징)
   - ~~Graviton~~ → ✅ **선행 적용**: Day 3 노드를 t4g.medium(arm64)으로 전환.
     맥북과 아키텍처가 일치해 빌드가 단순해지고 20% 저렴합니다

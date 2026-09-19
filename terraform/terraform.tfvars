@@ -32,3 +32,6 @@ addon_version_pod_identity = "v1.4.0-eksbuild.2"
 
 # ---------- 스토리지 (Day 9) ----------
 addon_version_ebs_csi = "v1.66.0-eksbuild.1"
+
+# ---------- 오토스케일링 (Day 10) ----------
+addon_version_metrics_server = "v0.9.0-eksbuild.11"

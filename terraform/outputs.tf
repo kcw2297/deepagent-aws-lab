@@ -112,3 +112,10 @@ output "ebs_csi_role_arn" {
   description = "EBS CSI 컨트롤러가 쓰는 IAM 역할 (애드온에 Pod Identity로 연결됨)"
   value       = aws_iam_role.ebs_csi.arn
 }
+
+# ---------- 오토스케일링 (Day 10) ----------
+
+output "cluster_autoscaler_role_arn" {
+  description = "Cluster Autoscaler가 쓰는 IAM 역할 (Pod Identity로 연결됨)"
+  value       = aws_iam_role.cluster_autoscaler.arn
+}

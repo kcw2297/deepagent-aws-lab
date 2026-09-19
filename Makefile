@@ -89,6 +89,9 @@ destroy:
 	done; \
 	if [ $$i -ge 18 ]; then echo "   ⚠️ 시간 초과. 남은 리소스가 있으면 destroy가 실패하거나 과금이 계속됩니다"; fi
 	@echo "── ③ Helm으로 설치한 컨트롤러 제거"
-	-@helm uninstall aws-load-balancer-controller -n kube-system 2>/dev/null || echo "   (없음 — 건너뜁니다)"
+	-@helm uninstall aws-load-balancer-controller -n kube-system 2>/dev/null || echo "   LB Controller (없음 — 건너뜁니다)"
+	@# Cluster Autoscaler는 AWS 리소스를 새로 만들지 않아 고아 위험은 없습니다(ASG의 desired만 조작).
+	@# 다만 destroy 도중 노드가 사라지는 걸 보고 다시 늘리려 들 수 있어 먼저 내립니다.
+	-@helm uninstall cluster-autoscaler -n kube-system 2>/dev/null || echo "   Cluster Autoscaler (없음 — 건너뜁니다)"
 	@echo "── ④ terraform destroy"
 	$(TF) destroy

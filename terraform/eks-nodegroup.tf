@@ -127,8 +127,18 @@ resource "aws_eks_node_group" "this" {
     Name = "${var.project}-ng"
   }
 
-  # [학습 노트] desired_size는 나중에 오토스케일러(Day 10)가 바꿀 수 있습니다.
-  # 그때 Terraform이 "원래 값으로 되돌리려" 하면 충돌하므로, 그 시점에
-  # lifecycle { ignore_changes = [scaling_config[0].desired_size] } 를 넣게 됩니다.
-  # 지금은 오토스케일러가 없으니 그대로 둡니다.
+  # [Day 10에서 추가] desired_size는 Cluster Autoscaler에게 양보합니다.
+  #
+  # 오토스케일러가 desired를 2 → 3으로 올린 뒤 make plan을 치면,
+  # Terraform은 "코드엔 2인데?" 하며 노드를 강제로 줄이려 합니다.
+  # 그걸 막으려고 desired_size의 변화를 무시하게 합니다.
+  #
+  #   min_size / max_size → Terraform이 관리 (확장의 경계)
+  #   desired_size        → 오토스케일러가 관리 (현재 값)
+  #
+  # 대가: tfvars의 node_desired_size를 바꿔도 이제 반영되지 않습니다.
+  # 처음 생성할 때만 쓰이고, 이후로는 오토스케일러가 정합니다.
+  lifecycle {
+    ignore_changes = [scaling_config[0].desired_size]
+  }
 }

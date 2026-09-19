@@ -133,3 +133,11 @@ variable "addon_version_ebs_csi" {
   type        = string
   default     = "v1.66.0-eksbuild.1"
 }
+
+# ---------- 오토스케일링 (Day 10) ----------
+
+variable "addon_version_metrics_server" {
+  description = "metrics-server 애드온 버전 (HPA의 전제)"
+  type        = string
+  default     = "v0.9.0-eksbuild.11"
+}

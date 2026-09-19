@@ -1,0 +1,46 @@
+# ── Cluster Autoscaler Helm values ──
+# 차트: autoscaler/cluster-autoscaler 9.59.0
+#
+# 설치:
+#   helm install cluster-autoscaler autoscaler/cluster-autoscaler \
+#     --version 9.59.0 -n kube-system -f k8s/day10/cluster-autoscaler-values.yaml
+
+# [자동 탐색] 이 두 태그가 모두 붙은 ASG를 찾아 관리합니다.
+#   k8s.io/cluster-autoscaler/enabled
+#   k8s.io/cluster-autoscaler/<clusterName>
+# EKS 관리형 노드 그룹이 ASG에 이미 붙여두었습니다 (Day 3에서 확인).
+# 그래서 ASG 이름을 직접 적을 필요가 없습니다.
+autoDiscovery:
+  clusterName: deepagent-eks-lab-cluster
+
+cloudProvider: aws
+awsRegion: ap-northeast-2
+
+# [버전 — 쿠버네티스 마이너 버전과 맞춥니다]
+# 차트 9.59.0의 기본 이미지는 v1.35.0인데 클러스터는 1.36입니다.
+# Cluster Autoscaler는 쿠버네티스 스케줄러의 로직을 내장해서 "이 파드가 새 노드에
+# 들어갈까"를 시뮬레이션합니다. 버전이 어긋나면 그 시뮬레이션이 실제 스케줄러와
+# 달라질 수 있어, 마이너 버전을 맞추는 게 권장 사항입니다.
+# 차트가 새 쿠버네티스를 따라잡기 전이라 태그를 직접 지정합니다.
+image:
+  tag: v1.36.1
+
+rbac:
+  serviceAccount:
+    create: true
+    # ⚠️ 반드시 지정해야 합니다.
+    # 비워두면 차트가 "cluster-autoscaler-aws-cluster-autoscaler" 같은 이름을 만들어
+    # Terraform의 Pod Identity 연결(service_account = "cluster-autoscaler")과 어긋나고,
+    # 권한 없이 떠서 AccessDenied를 냅니다.
+    name: cluster-autoscaler
+    # Pod Identity라 annotations(IRSA 역할 ARN)는 비워둡니다 — Day 8과 같음.
+
+extraArgs:
+  logtostderr: true
+  stderrthreshold: info
+  v: 4
+  # [실습용으로 축소를 빠르게 합니다]
+  # 기본값은 둘 다 10분입니다. 부하가 잠깐 줄었다고 노드를 지웠다가 다시 늘리는
+  # 진동을 막기 위한 값이라, 운영에서는 기본값을 쓰세요.
+  scale-down-unneeded-time: 1m     # 노드가 1분간 불필요하면 제거 후보
+  scale-down-delay-after-add: 1m   # 노드를 추가한 뒤 1분간은 축소 판단을 보류
