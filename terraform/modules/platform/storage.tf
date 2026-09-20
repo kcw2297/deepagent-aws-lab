@@ -25,33 +25,29 @@
 # ============================================================================
 
 # ----------------------------------------------------------------------------
-# 1) 컨트롤러용 IAM 역할 — Pod Identity 방식 (Day 7·8과 같은 패턴)
+# 1) 컨트롤러용 IAM 역할 — 재사용 모듈로
 #
 # 권한이 필요한 건 controller뿐입니다. node 플러그인은 AWS를 부르지 않습니다.
+#
+# [create_association = false 인 이유]
+# 이 애드온은 아래 애드온 리소스 안에서 pod_identity_association을 직접 만듭니다.
+# 모듈에서도 만들면 같은 연결이 두 번 생깁니다. 그래서 역할만 받아 갑니다.
+# — 같은 모듈이라도 호출마다 켜고 끌 수 있다는 것이 모듈 인자의 쓸모입니다.
 # ----------------------------------------------------------------------------
-resource "aws_iam_role" "ebs_csi" {
-  name = "${var.project}-ebs-csi-role"
+module "ebs_csi_role" {
+  source = "../pod-identity-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "pods.eks.amazonaws.com" }
-      Action    = ["sts:AssumeRole", "sts:TagSession"]
-    }]
-  })
+  project      = var.project
+  name         = "ebs-csi"
+  cluster_name = var.cluster_name
 
-  tags = {
-    Name = "${var.project}-ebs-csi-role"
-  }
-}
+  # 연결은 애드온이 만들지만, 모듈 입력은 채워둡니다 (어디에 쓰이는지 코드로 남기려고)
+  namespace          = "kube-system"
+  service_account    = "ebs-csi-controller-sa"
+  create_association = false
 
-# AWS 관리형 정책. ec2:CreateVolume, AttachVolume, DeleteVolume, CreateSnapshot 등.
-# Day 8 LB Controller는 공식 정책 파일을 내려받아 썼지만, EBS CSI는 AWS가
-# 관리형 정책으로 제공하므로 ARN만 붙이면 됩니다.
-resource "aws_iam_role_policy_attachment" "ebs_csi" {
-  role       = aws_iam_role.ebs_csi.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  # AWS 관리형 정책. ec2:CreateVolume, AttachVolume, DeleteVolume, CreateSnapshot 등.
+  managed_policy_arns = { ebs-csi = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy" }
 }
 
 # ----------------------------------------------------------------------------
@@ -64,7 +60,7 @@ resource "aws_iam_role_policy_attachment" "ebs_csi" {
 # 애드온이 만드는 SA 이름을 우리가 알 필요 없이, 애드온과 권한이 한 곳에 묶입니다.
 # ----------------------------------------------------------------------------
 resource "aws_eks_addon" "ebs_csi" {
-  cluster_name  = aws_eks_cluster.this.name
+  cluster_name  = var.cluster_name
   addon_name    = "aws-ebs-csi-driver"
   addon_version = var.addon_version_ebs_csi
 
@@ -72,16 +68,15 @@ resource "aws_eks_addon" "ebs_csi" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   pod_identity_association {
-    role_arn        = aws_iam_role.ebs_csi.arn
+    role_arn        = module.ebs_csi_role.role_arn
     service_account = "ebs-csi-controller-sa" # 애드온이 kube-system에 만드는 SA
   }
 
   # controller 파드가 노드에 스케줄돼야 하고, Pod Identity 에이전트가 있어야
   # 자격증명을 받을 수 있습니다. 정책도 먼저 붙어 있어야 합니다.
   depends_on = [
-    aws_eks_node_group.this,
     aws_eks_addon.pod_identity,
-    aws_iam_role_policy_attachment.ebs_csi,
+    module.ebs_csi_role,
   ]
 
   tags = {

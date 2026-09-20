@@ -30,24 +30,7 @@
 # ============================================================================
 
 # ----------------------------------------------------------------------------
-# 1) 컨트롤 플레인 로그 그룹
-#
-# 이름은 EKS가 정한 규칙 그대로여야 합니다: /aws/eks/<클러스터 이름>/cluster
-# aws_eks_cluster.this.name을 참조하면 "클러스터 → 로그 그룹 → 클러스터" 순환이
-# 생기므로, 클러스터 이름과 같은 식(var.project)으로 직접 만듭니다.
-# 클러스터 쪽에서 depends_on으로 이 로그 그룹을 먼저 만들게 합니다 (eks-cluster.tf).
-# ----------------------------------------------------------------------------
-resource "aws_cloudwatch_log_group" "eks_cluster" {
-  name              = "/aws/eks/${var.project}-cluster/cluster"
-  retention_in_days = var.log_retention_days
-
-  tags = {
-    Name = "${var.project}-eks-cluster-logs"
-  }
-}
-
-# ----------------------------------------------------------------------------
-# 2) Container Insights 로그 그룹 4개
+# 1) Container Insights 로그 그룹 4개
 #
 #   performance : CloudWatch Agent가 보내는 메트릭 원본 (EMF 형식 로그)
 #                 → CloudWatch가 여기서 숫자를 뽑아 메트릭으로 만듭니다.
@@ -60,7 +43,7 @@ resource "aws_cloudwatch_log_group" "eks_cluster" {
 resource "aws_cloudwatch_log_group" "container_insights" {
   for_each = toset(["performance", "application", "dataplane", "host"])
 
-  name              = "/aws/containerinsights/${var.project}-cluster/${each.key}"
+  name              = "/aws/containerinsights/${var.cluster_name}/${each.key}"
   retention_in_days = var.log_retention_days
 
   tags = {
@@ -69,37 +52,29 @@ resource "aws_cloudwatch_log_group" "container_insights" {
 }
 
 # ----------------------------------------------------------------------------
-# 3) CloudWatch Agent / Fluent Bit용 IAM 역할 — Pod Identity (Day 7·8·9·10과 같은 패턴)
+# 2) CloudWatch Agent / Fluent Bit용 IAM 역할 — 재사용 모듈로
 #
 # 에이전트가 CloudWatch에 메트릭·로그를 "쓰려면" AWS 권한이 필요합니다.
 # metrics-server(Day 10)는 클러스터 안에서만 돌아서 권한이 필요 없었던 것과 대비됩니다.
+# 연결은 Day 9 EBS CSI처럼 애드온이 직접 만듭니다 → create_association = false
 # ----------------------------------------------------------------------------
-resource "aws_iam_role" "cloudwatch_agent" {
-  name = "${var.project}-cloudwatch-agent-role"
+module "cloudwatch_agent_role" {
+  source = "../pod-identity-role"
 
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "pods.eks.amazonaws.com" }
-      Action    = ["sts:AssumeRole", "sts:TagSession"]
-    }]
-  })
+  project      = var.project
+  name         = "cloudwatch-agent"
+  cluster_name = var.cluster_name
 
-  tags = {
-    Name = "${var.project}-cloudwatch-agent-role"
-  }
-}
+  namespace          = "amazon-cloudwatch"
+  service_account    = "cloudwatch-agent" # Agent와 Fluent Bit이 함께 쓰는 SA
+  create_association = false
 
-# AWS 관리형 정책 (Day 9 EBS CSI처럼 ARN만 붙입니다).
-# cloudwatch:PutMetricData, logs:PutLogEvents/CreateLogStream, ec2:DescribeTags 등.
-resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
-  role       = aws_iam_role.cloudwatch_agent.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  # cloudwatch:PutMetricData, logs:PutLogEvents/CreateLogStream, ec2:DescribeTags 등
+  managed_policy_arns = { cloudwatch-agent = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy" }
 }
 
 # ----------------------------------------------------------------------------
-# 4) amazon-cloudwatch-observability — 관리형 애드온
+# 3) amazon-cloudwatch-observability — 관리형 애드온
 #
 # [기본값으로 설치하면 생각보다 많은 게 딸려옵니다]
 # 애드온 설정 스키마(aws eks describe-addon-configuration)를 확인한 결과:
@@ -118,7 +93,7 @@ resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
 # SA "cloudwatch-agent"는 CloudWatch Agent와 Fluent Bit이 함께 씁니다.
 # ----------------------------------------------------------------------------
 resource "aws_eks_addon" "cloudwatch_observability" {
-  cluster_name  = aws_eks_cluster.this.name
+  cluster_name  = var.cluster_name
   addon_name    = "amazon-cloudwatch-observability"
   addon_version = var.addon_version_cloudwatch_observability
 
@@ -153,7 +128,7 @@ resource "aws_eks_addon" "cloudwatch_observability" {
   })
 
   pod_identity_association {
-    role_arn        = aws_iam_role.cloudwatch_agent.arn
+    role_arn        = module.cloudwatch_agent_role.role_arn
     service_account = "cloudwatch-agent" # 애드온이 amazon-cloudwatch 네임스페이스에 만드는 SA
   }
 
@@ -161,9 +136,8 @@ resource "aws_eks_addon" "cloudwatch_observability" {
   # destroy 때는 역순이라 애드온(에이전트)이 먼저 사라진 뒤 로그 그룹이 지워집니다
   # — 에이전트가 살아 있으면 지운 그룹을 다시 만들어버릴 수 있습니다.
   depends_on = [
-    aws_eks_node_group.this,
     aws_eks_addon.pod_identity,
-    aws_iam_role_policy_attachment.cloudwatch_agent,
+    module.cloudwatch_agent_role,
     aws_cloudwatch_log_group.container_insights,
   ]
 

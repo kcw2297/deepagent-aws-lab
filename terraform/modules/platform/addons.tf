@@ -36,7 +36,7 @@
 # (t4g.nano 2×2, t4g.medium 3×6, m7g.4xlarge 8×30).
 # ----------------------------------------------------------------------------
 resource "aws_eks_addon" "vpc_cni" {
-  cluster_name  = aws_eks_cluster.this.name
+  cluster_name  = var.cluster_name
   addon_name    = "vpc-cni"
   addon_version = var.addon_version_vpc_cni
 
@@ -75,7 +75,7 @@ resource "aws_eks_addon" "vpc_cni" {
 # 컨트롤플레인과 버전 차이가 크면 안 되기 때문입니다.
 # ----------------------------------------------------------------------------
 resource "aws_eks_addon" "kube_proxy" {
-  cluster_name  = aws_eks_cluster.this.name
+  cluster_name  = var.cluster_name
   addon_name    = "kube-proxy"
   addon_version = var.addon_version_kube_proxy
 
@@ -103,14 +103,13 @@ resource "aws_eks_addon" "kube_proxy" {
 # 그래서 노드 그룹이 준비된 뒤에 다루도록 순서를 강제합니다.
 # ----------------------------------------------------------------------------
 resource "aws_eks_addon" "coredns" {
-  cluster_name  = aws_eks_cluster.this.name
+  cluster_name  = var.cluster_name
   addon_name    = "coredns"
   addon_version = var.addon_version_coredns
 
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.this]
 
   tags = {
     Name = "${var.project}-coredns"

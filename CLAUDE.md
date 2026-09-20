@@ -61,13 +61,29 @@ ECR 비용은 GB당 월 $0.10이고 이미지가 작아 **월 1센트 수준**�
 리포 루트의 `Makefile`을 씁니다. (`make` = 사용법, `make init/plan/apply/destroy`)
 
 ```bash
-make plan                      # apply 전에 무엇이 왜 생기는지 읽기
-terraform -chdir=terraform fmt      # 커밋 전 항상
-terraform -chdir=terraform validate
+make plan                      # apply 전에 무엇이 왜 생기는지 읽기 (기본 ENV=dev)
+make plan ENV=prod             # prod는 plan까지만 — apply하지 않습니다
+
+terraform -chdir=terraform fmt -recursive       # 커밋 전 항상
+terraform -chdir=terraform/envs/dev validate    # 루트 모듈 단위로 검증
 ```
+
+### 디렉터리 구조 (Day 12부터)
+
+```
+terraform/
+  modules/      network · cluster · platform · pod-identity-role   ← 리소스는 여기
+  envs/dev/     루트 모듈: 모듈 조립 + tfvars + 백엔드 key(dev)
+  envs/prod/    같은 모듈, 다른 값. 학습용이라 apply하지 않습니다
+```
+
+- **리소스를 새로 추가할 때는 `modules/` 안에** 씁니다. 루트(`envs/*`)는 조립만 합니다.
+- 모듈 간 참조는 반드시 **output → input**으로만 합니다. 의존 방향은 network → cluster → platform 한쪽입니다.
+- 모듈에 입력을 추가하면 **`envs/dev`와 `envs/prod` 양쪽**을 고쳐야 합니다 (디렉터리 분리 방식의 비용).
 
 `.tf` 파일을 수정했으면 커밋 전에 `fmt`와 `validate`를 돌리세요.
 
 - 변수는 `variables.tf`에 정의하고 값은 `terraform.tfvars`에 명시합니다 (default가 있어도).
+  모듈의 `variables.tf`에는 default를 두지 않습니다 — 값은 환경(tfvars)이 정합니다.
 - 리전은 `ap-northeast-2`(서울), AZ는 `2a`/`2c` 2개만 씁니다.
 - 리소스 이름/태그 접두사는 `var.project`를 씁니다. 공통 태그는 provider의 `default_tags`가 붙입니다.

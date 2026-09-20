@@ -29,21 +29,25 @@ deepagent-aws-lab/
 │   ├── curriculum.md      # 전체 커리큘럼 로드맵 (Day별)
 │   ├── day-01-network.md  # Day 1 상세 학습 노트
 │   └── remote-state.md    # 원격 state(S3 백엔드) 학습 노트
-└── terraform/
-    ├── versions.tf        # Terraform/Provider 버전 고정 + S3 백엔드
-    ├── providers.tf       # AWS provider 설정
-    ├── variables.tf       # 입력 변수 정의
-    ├── terraform.tfvars   # 변수 실제 값
-    ├── network.tf         # [Day 1] VPC / 서브넷 / 라우팅
-    └── outputs.tf         # 출력값
+└── terraform/             # [Day 12] 모듈 + 환경 구조
+    ├── modules/
+    │   ├── network/       # [Day 1] VPC / 서브넷 / NAT / 라우팅
+    │   ├── cluster/       # [Day 2~4,7,11] 컨트롤플레인 / 노드그룹 / 접근제어 / OIDC
+    │   ├── platform/      # [Day 6~11] 애드온 / 컨트롤러 권한 / 스토리지 / 오토스케일링 / 관측성
+    │   └── pod-identity-role/  # 재사용 모듈 (역할 + 권한 + Pod Identity 연결)
+    └── envs/
+        ├── dev/           # 루트 모듈 — 모듈 조립 + tfvars + 백엔드 key(dev)
+        └── prod/          # 같은 모듈, 다른 값 (학습용이라 apply하지 않음)
 ```
+
+리소스는 `modules/` 안에 있고, `envs/*`는 조립만 합니다. 자세히: [docs/day-12-modules.md](docs/day-12-modules.md)
 
 ## 새 기기에서 시작할 때 (기기당 1회)
 
 ```bash
 aws configure                 # region: ap-northeast-2, output: json
 aws sts get-caller-identity   # 연결 확인
-make init                     # S3 백엔드 연결
+make init                     # S3 백엔드 연결 (환경별: make init ENV=prod)
 ```
 
 ## 매 세션 루틴

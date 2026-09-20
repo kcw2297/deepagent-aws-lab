@@ -53,7 +53,7 @@ resource "aws_subnet" "public" {
     # 이 클러스터 태그도 함께 확인합니다(SubnetsClusterTagCheck 기능이 기본 활성).
     # 이 태그가 없으면 "서브넷을 찾을 수 없다"며 ALB 생성이 실패합니다.
     # 값 shared = 여러 클러스터가 이 서브넷을 공유할 수 있다는 뜻.
-    "kubernetes.io/cluster/${var.project}-cluster" = "shared"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }
 
@@ -74,7 +74,7 @@ resource "aws_subnet" "private" {
     "kubernetes.io/role/internal-elb" = "1"
     # [Day 8에서 추가] 위 public 서브넷과 같은 이유.
     # 파드가 ALB의 타깃이 되므로(target-type: ip) 프라이빗 서브넷도 인식돼야 합니다.
-    "kubernetes.io/cluster/${var.project}-cluster" = "shared"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }
 

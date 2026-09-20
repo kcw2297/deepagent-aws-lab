@@ -45,56 +45,29 @@ resource "aws_iam_policy" "alb_controller" {
 }
 
 # ----------------------------------------------------------------------------
-# 2) 컨트롤러용 IAM 역할 — Pod Identity 방식
+# 2) 역할 + Pod Identity 연결 — 재사용 모듈로
 #
-# Day 7에서 배운 두 방식 중 Pod Identity를 씁니다.
-# (대부분의 문서는 아직 IRSA로 설명하지만, 신규 구성에는 Pod Identity가 권장됩니다)
+# [Day 12 전]  aws_iam_role + aws_iam_role_policy_attachment + association 3개를 직접 작성
+# [Day 12 후]  modules/pod-identity-role 호출 한 번
 #
-# 신뢰 정책이 단순한 것을 다시 확인해 보세요 —
-# OIDC URL도, sub 조건도 없습니다. "어느 SA가 쓸지"는 아래 association이 정합니다.
-# ----------------------------------------------------------------------------
-resource "aws_iam_role" "alb_controller" {
-  name = "${var.project}-alb-controller-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "pods.eks.amazonaws.com" }
-      Action    = ["sts:AssumeRole", "sts:TagSession"]
-    }]
-  })
-
-  tags = {
-    Name = "${var.project}-alb-controller-role"
-  }
-}
-
-resource "aws_iam_role_policy_attachment" "alb_controller" {
-  role       = aws_iam_role.alb_controller.name
-  policy_arn = aws_iam_policy.alb_controller.arn
-}
-
-# ----------------------------------------------------------------------------
-# 3) Pod Identity 연결
+# 위에서 만든 정책(aws_iam_policy.alb_controller)은 이 컨트롤러 전용이라 여기 남기고,
+# ARN만 모듈에 넘깁니다. "무엇이 공통이고 무엇이 개별인가"를 나눈 결과입니다.
 #
-# Helm 차트가 kube-system에 `aws-load-balancer-controller` 라는 SA를 만듭니다.
-# 그 SA와 위 역할을 묶습니다.
-#
-# [순서 주의] 이 연결은 SA가 아직 없어도 만들어집니다 —
+# [순서 주의] 연결은 SA가 아직 없어도 만들어집니다 —
 # AWS는 쿠버네티스 쪽에 그 SA가 실제로 있는지 검사하지 않습니다.
 # 그래서 "먼저 권한을 준비하고 → Helm으로 설치" 순서가 가능합니다.
-# 반대로 하면 컨트롤러가 권한 없이 떠서 에러 로그를 쏟습니다.
 # ----------------------------------------------------------------------------
-resource "aws_eks_pod_identity_association" "alb_controller" {
-  cluster_name    = aws_eks_cluster.this.name
-  namespace       = "kube-system"
-  service_account = "aws-load-balancer-controller"
-  role_arn        = aws_iam_role.alb_controller.arn
+module "alb_controller_role" {
+  source = "../pod-identity-role"
 
+  project             = var.project
+  name                = "alb-controller"
+  cluster_name        = var.cluster_name
+  namespace           = "kube-system"
+  service_account     = "aws-load-balancer-controller" # Helm 차트가 만드는 SA 이름
+  managed_policy_arns = { alb-controller = aws_iam_policy.alb_controller.arn }
+
+  # 연결(association)은 에이전트가 설치된 뒤에 만들어야 합니다.
+  # 모듈 블록에도 depends_on을 걸 수 있습니다 — 모듈 안 리소스 전체가 기다립니다.
   depends_on = [aws_eks_addon.pod_identity]
-
-  tags = {
-    Name = "${var.project}-alb-controller-podid"
-  }
 }

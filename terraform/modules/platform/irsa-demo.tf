@@ -32,23 +32,6 @@
 #   ③ 파드는 그 토큰으로 sts:AssumeRoleWithWebIdentity 호출 → 임시 자격증명
 # ----------------------------------------------------------------------------
 
-# OIDC 발급자의 TLS 인증서를 가져옵니다. 지문(thumbprint)이 필요해서입니다.
-data "tls_certificate" "eks_oidc" {
-  url = aws_eks_cluster.this.identity[0].oidc[0].issuer
-}
-
-# ① IAM에 OIDC 발급자 등록
-#    이게 없으면 AWS는 클러스터가 발급한 토큰을 "모르는 출처"로 보고 거부합니다.
-resource "aws_iam_openid_connect_provider" "eks" {
-  url             = aws_eks_cluster.this.identity[0].oidc[0].issuer
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks_oidc.certificates[0].sha1_fingerprint]
-
-  tags = {
-    Name = "${var.project}-oidc"
-  }
-}
-
 # ② 그 발급자를 신뢰하는 역할
 #
 # [Day 2·3의 역할과 비교 — 신뢰하는 대상이 또 다릅니다]
@@ -66,16 +49,16 @@ resource "aws_iam_role" "irsa_demo" {
     Statement = [{
       Effect = "Allow"
       Principal = {
-        Federated = aws_iam_openid_connect_provider.eks.arn
+        Federated = var.oidc_provider_arn
       }
       Action = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
           # sub 조건이 핵심입니다. 이게 없으면 이 클러스터의 "아무 SA나"
           # 이 역할을 빌릴 수 있게 됩니다 — 흔한 보안 실수입니다.
-          "${local.oidc_host}:sub" = "system:serviceaccount:demo:irsa-demo"
+          "${var.oidc_issuer_host}:sub" = "system:serviceaccount:demo:irsa-demo"
           # aud(audience)도 고정합니다.
-          "${local.oidc_host}:aud" = "sts.amazonaws.com"
+          "${var.oidc_issuer_host}:aud" = "sts.amazonaws.com"
         }
       }
     }]
@@ -84,11 +67,6 @@ resource "aws_iam_role" "irsa_demo" {
   tags = {
     Name = "${var.project}-irsa-demo-role"
   }
-}
-
-locals {
-  # 조건 키는 "https://"를 뗀 호스트+경로 형태로 써야 합니다.
-  oidc_host = replace(aws_eks_cluster.this.identity[0].oidc[0].issuer, "https://", "")
 }
 
 # ③ 권한: 노드 역할이 갖지 "않은" 것을 고릅니다.
@@ -125,14 +103,13 @@ resource "aws_iam_role_policy" "irsa_demo" {
 
 # 에이전트를 애드온으로 설치합니다. 파드에 자격증명을 전달하는 역할을 합니다.
 resource "aws_eks_addon" "pod_identity" {
-  cluster_name  = aws_eks_cluster.this.name
+  cluster_name  = var.cluster_name
   addon_name    = "eks-pod-identity-agent"
   addon_version = var.addon_version_pod_identity
 
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.this]
 
   tags = {
     Name = "${var.project}-pod-identity-agent"
@@ -180,7 +157,7 @@ resource "aws_iam_role_policy" "pod_identity_demo" {
 # IRSA에서는 이 정보가 ① 역할의 sub 조건 ② SA 애노테이션 두 곳에 흩어져 있는데,
 # Pod Identity에서는 이 리소스 한 곳에 모입니다.
 resource "aws_eks_pod_identity_association" "demo" {
-  cluster_name    = aws_eks_cluster.this.name
+  cluster_name    = var.cluster_name
   namespace       = "demo"
   service_account = "podid-demo"
   role_arn        = aws_iam_role.pod_identity_demo.arn

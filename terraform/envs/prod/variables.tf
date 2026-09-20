@@ -1,0 +1,168 @@
+# 입력 변수 정의. 값은 terraform.tfvars 에서 채웁니다.
+# 변수로 빼두면 CIDR/리전/이름 같은 걸 코드 수정 없이 바꿀 수 있습니다.
+
+variable "region" {
+  description = "리소스를 생성할 AWS 리전"
+  type        = string
+  default     = "ap-northeast-2"
+}
+
+variable "environment" {
+  description = "환경 이름. 공통 태그(Env)에 붙어 콘솔·비용 탐색기에서 dev/prod를 구분합니다"
+  type        = string
+}
+
+variable "project" {
+  description = "리소스 이름/태그의 접두사로 쓰는 프로젝트 이름"
+  type        = string
+  default     = "deepagent-eks-lab"
+}
+
+# ---------- 네트워크 (Day 1) ----------
+
+variable "vpc_cidr" {
+  description = "VPC 전체 IP 대역"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+variable "azs" {
+  description = "사용할 가용영역(AZ) 목록. 학습용이라 2개면 충분합니다."
+  type        = list(string)
+  default     = ["ap-northeast-2a", "ap-northeast-2c"]
+}
+
+variable "public_subnet_cidrs" {
+  description = "퍼블릭 서브넷 CIDR (AZ 순서와 1:1 매칭). 로드밸런서/NAT가 위치."
+  type        = list(string)
+  default     = ["10.0.0.0/20", "10.0.16.0/20"]
+}
+
+variable "private_subnet_cidrs" {
+  description = "프라이빗 서브넷 CIDR (AZ 순서와 1:1 매칭). 워커 노드/파드가 위치."
+  type        = list(string)
+  default     = ["10.0.32.0/20", "10.0.48.0/20"]
+}
+
+# ---------- EKS 컨트롤플레인 (Day 2) ----------
+
+variable "kubernetes_version" {
+  description = "EKS 클러스터의 쿠버네티스 버전. 지원 목록은 `aws eks describe-cluster-versions`로 확인."
+  type        = string
+  default     = "1.36"
+}
+
+variable "cluster_public_access_cidrs" {
+  description = "쿠버네티스 API 서버(퍼블릭 엔드포인트)에 접근 가능한 IP 대역. 조이려면 [\"<내 공인IP>/32\"]."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
+# ---------- 노드 그룹 (Day 3) ----------
+
+variable "node_instance_type" {
+  description = "워커 노드 EC2 인스턴스 타입. 개발 머신(Apple Silicon)과 맞추려고 Graviton(arm64)을 씁니다."
+  type        = string
+  default     = "t4g.medium"
+}
+
+variable "node_ami_type" {
+  description = "노드 AMI 타입. instance_type의 아키텍처와 반드시 일치해야 합니다 (arm64 ↔ ARM_64)."
+  type        = string
+  default     = "AL2023_ARM_64_STANDARD"
+
+  validation {
+    condition     = contains(["AL2023_ARM_64_STANDARD", "AL2023_x86_64_STANDARD"], var.node_ami_type)
+    error_message = "AL2023_ARM_64_STANDARD 또는 AL2023_x86_64_STANDARD만 사용합니다."
+  }
+}
+
+variable "node_desired_size" {
+  description = "평상시 노드 수. 비용을 더 줄이려면 1로 낮출 수 있습니다(대신 AZ 분산 관찰 불가)."
+  type        = number
+  default     = 2
+}
+
+variable "node_min_size" {
+  description = "노드 최소 수"
+  type        = number
+  default     = 1
+}
+
+variable "node_max_size" {
+  description = "노드 최대 수. Day 10 오토스케일링 실습의 상한이 됩니다."
+  type        = number
+  default     = 3
+}
+
+variable "node_disk_size" {
+  description = "노드 루트 EBS 볼륨 크기(GB)"
+  type        = number
+  default     = 20
+}
+
+# ---------- 애드온 (Day 6) ----------
+# 버전을 코드에 명시합니다. versions.tf에서 provider 버전을 고정한 것과 같은 이유로,
+# "어제 되던 게 오늘 안 되는" 상황을 막기 위해서입니다.
+# 사용 가능한 버전 확인:
+#   aws eks describe-addon-versions --addon-name vpc-cni --kubernetes-version 1.36
+
+variable "addon_version_vpc_cni" {
+  description = "VPC CNI 애드온 버전"
+  type        = string
+  default     = "v1.22.4-eksbuild.3"
+}
+
+variable "addon_version_kube_proxy" {
+  description = "kube-proxy 애드온 버전. 쿠버네티스 버전과 묶여 있습니다."
+  type        = string
+  default     = "v1.36.0-eksbuild.17"
+}
+
+variable "addon_version_coredns" {
+  description = "CoreDNS 애드온 버전"
+  type        = string
+  default     = "v1.14.3-eksbuild.14"
+}
+
+variable "addon_version_pod_identity" {
+  description = "EKS Pod Identity Agent 애드온 버전 (Day 7)"
+  type        = string
+  default     = "v1.4.0-eksbuild.2"
+}
+
+# ---------- 스토리지 (Day 9) ----------
+
+variable "addon_version_ebs_csi" {
+  description = "EBS CSI 드라이버 애드온 버전"
+  type        = string
+  default     = "v1.66.0-eksbuild.1"
+}
+
+# ---------- 오토스케일링 (Day 10) ----------
+
+variable "addon_version_metrics_server" {
+  description = "metrics-server 애드온 버전 (HPA의 전제)"
+  type        = string
+  default     = "v0.9.0-eksbuild.11"
+}
+
+# ---------- 관측성 (Day 11) ----------
+
+variable "cluster_log_types" {
+  description = "CloudWatch로 보낼 컨트롤플레인 로그 종류"
+  type        = list(string)
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch 로그 그룹 보관 기간(일). 학습용이라 짧게"
+  type        = number
+  default     = 1
+}
+
+variable "addon_version_cloudwatch_observability" {
+  description = "amazon-cloudwatch-observability 애드온 버전 (Container Insights + Fluent Bit)"
+  type        = string
+  default     = "v6.6.0-eksbuild.1"
+}

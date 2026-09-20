@@ -50,7 +50,7 @@ resource "aws_iam_role_policy_attachment" "cluster_eks_policy" {
 # 💸 생성되는 순간부터 시간당 $0.10이 과금됩니다. 생성/삭제에 각각 10분 안팎 걸립니다.
 # ----------------------------------------------------------------------------
 resource "aws_eks_cluster" "this" {
-  name     = "${var.project}-cluster"
+  name     = var.cluster_name
   version  = var.kubernetes_version
   role_arn = aws_iam_role.cluster.arn
 
@@ -59,7 +59,7 @@ resource "aws_eks_cluster" "this" {
     # 여기 적은 서브넷에 EKS가 ENI를 만들어 워커 노드와 통신합니다.
     # 노드가 프라이빗에 있을 예정(Day 3)이므로 컨트롤플레인의 통로도 프라이빗에 둡니다.
     # 최소 2개 AZ가 필요합니다 — Day 1에서 2a/2c에 나눠 만든 이유입니다.
-    subnet_ids = aws_subnet.private[*].id
+    subnet_ids = var.private_subnet_ids
 
     # [엔드포인트 = 쿠버네티스 API 서버 주소]
     # 위 ENI와는 별개로, AWS가 관리하는 API 서버 접속 주소가 생깁니다.

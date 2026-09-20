@@ -36,14 +36,13 @@
 # (AWS 권한이 필요 없습니다 — 클러스터 안의 kubelet만 조회합니다)
 # ----------------------------------------------------------------------------
 resource "aws_eks_addon" "metrics_server" {
-  cluster_name  = aws_eks_cluster.this.name
+  cluster_name  = var.cluster_name
   addon_name    = "metrics-server"
   addon_version = var.addon_version_metrics_server
 
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.this]
 
   tags = {
     Name = "${var.project}-metrics-server"
@@ -51,40 +50,33 @@ resource "aws_eks_addon" "metrics_server" {
 }
 
 # ----------------------------------------------------------------------------
-# 2) Cluster Autoscaler용 IAM 역할 — Pod Identity (Day 7·8·9와 같은 패턴)
-# ----------------------------------------------------------------------------
-resource "aws_iam_role" "cluster_autoscaler" {
-  name = "${var.project}-cluster-autoscaler-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "pods.eks.amazonaws.com" }
-      Action    = ["sts:AssumeRole", "sts:TagSession"]
-    }]
-  })
-
-  tags = {
-    Name = "${var.project}-cluster-autoscaler-role"
-  }
-}
-
+# 2) 역할 + 권한 + 연결 — 재사용 모듈로
+#
 # [권한 설계 — 공식 권장 정책을 그대로 따릅니다]
 # 출처: kubernetes/autoscaler cluster-autoscaler/cloudprovider/aws/README.md
 #
 # 조회(Describe*)는 전체 허용, **확장·축소 두 개는 태그 조건으로 제한**합니다.
 # 조건이 없으면 이 파드가 계정의 "아무 ASG"나 늘리고 줄일 수 있게 됩니다.
-# 우리 클러스터 소유(owned)로 표시된 ASG만 건드리도록 좁힙니다.
 #
-# Day 8 LB Controller는 AWS가 준 정책 파일을 그대로 썼고,
-# Day 9 EBS CSI는 AWS 관리형 정책(ARN)을 썼습니다.
-# Cluster Autoscaler는 관리형 정책이 없어서 직접 작성합니다 — 그래서 조건까지 보입니다.
-resource "aws_iam_role_policy" "cluster_autoscaler" {
-  name = "cluster-autoscaler"
-  role = aws_iam_role.cluster_autoscaler.id
+#   Day 8  LB Controller     : AWS가 준 정책 파일       → managed_policy_arns
+#   Day 9  EBS CSI           : AWS 관리형 정책 ARN      → managed_policy_arns
+#   Day 10 Cluster Autoscaler: 관리형 정책이 없음        → inline_policy  ← 여기
+#
+# 같은 모듈이 세 가지 권한 방식을 모두 받아낼 수 있어야 재사용이 됩니다.
+# ----------------------------------------------------------------------------
+module "cluster_autoscaler_role" {
+  source = "../pod-identity-role"
 
-  policy = jsonencode({
+  project      = var.project
+  name         = "cluster-autoscaler"
+  cluster_name = var.cluster_name
+
+  # Helm 차트가 만들 SA 이름과 맞춥니다.
+  # (k8s/day10/cluster-autoscaler-values.yaml 의 rbac.serviceAccount.name)
+  namespace       = "kube-system"
+  service_account = "cluster-autoscaler"
+
+  inline_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
@@ -113,27 +105,13 @@ resource "aws_iam_role_policy" "cluster_autoscaler" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "aws:ResourceTag/k8s.io/cluster-autoscaler/enabled"                      = "true"
-            "aws:ResourceTag/k8s.io/cluster-autoscaler/${aws_eks_cluster.this.name}" = "owned"
+            "aws:ResourceTag/k8s.io/cluster-autoscaler/enabled"             = "true"
+            "aws:ResourceTag/k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
           }
         }
       },
     ]
   })
-}
-
-# Helm 차트가 kube-system에 만들 SA 이름과 맞춥니다.
-# (k8s/day10/cluster-autoscaler-values.yaml 의 rbac.serviceAccount.name)
-# SA가 아직 없어도 연결은 만들어집니다 — Day 8에서 확인한 순서입니다.
-resource "aws_eks_pod_identity_association" "cluster_autoscaler" {
-  cluster_name    = aws_eks_cluster.this.name
-  namespace       = "kube-system"
-  service_account = "cluster-autoscaler"
-  role_arn        = aws_iam_role.cluster_autoscaler.arn
 
   depends_on = [aws_eks_addon.pod_identity]
-
-  tags = {
-    Name = "${var.project}-cluster-autoscaler-podid"
-  }
 }

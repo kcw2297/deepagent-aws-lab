@@ -151,11 +151,21 @@ EKS가 올라갈 **VPC 네트워크**를 만듭니다. K8s 이전의 순수 AWS 
 - Prometheus/Grafana는 심화 주제로 미룸 (CloudWatch와의 역할 분담은 노트에 정리)
 - 📄 상세: [day-11-observability.md](day-11-observability.md)
 
-### Day 12 — 리팩터링: 모듈화 & 환경 분리 🟢 (현재)
-- 지금까지의 코드를 Terraform 모듈로 정리
-- 여러 환경(dev/prod) 구성 전략 — 백엔드 `key`를 나누거나 workspace 활용
+### Day 12 — 리팩터링: 모듈화 & 환경 분리 ✅
+Day 1~11에 펼쳐놓은 코드를 모듈로 묶고 dev/prod를 분리합니다.
+- 모듈 = 디렉터리. 입력은 `variables.tf`, 출력은 `outputs.tf`, 안의 리소스는 밖에서 못 봄
+- 경계: network → cluster → platform (한 방향). **모듈 경계가 순환 참조를 드러냄**
+  → Day 11 컨트롤플레인 로그 그룹을 cluster 모듈로 이동
+- 반복 4회를 겪은 뒤 뽑은 재사용 모듈 `pod-identity-role` (관리형/인라인 정책, 연결 on/off)
+- `for_each`에 list를 쓰면 apply 전 미정 값으로 plan 실패 → map으로 해결
+- 환경 분리는 **디렉터리 + 백엔드 key**. workspace와의 비교표
+- 검증: 리팩터링 전후 `Plan: 54 to add`로 동일함을 워크트리로 확인
+- 살아 있는 리소스였다면 `moved` 블록 / `terraform state mv`가 필요 (오늘은 state가 비어 불필요)
+- 📄 상세: [day-12-modules.md](day-12-modules.md)
 - ~~S3 원격 백엔드로 state 관리~~ → ✅ **선행 완료**: [remote-state.md](remote-state.md)
   (맥북 여러 대에서 작업하게 되어 앞당겨 적용했습니다)
+
+> **커리큘럼 12일 완료** — 이후는 아래 심화 주제에서 골라 이어갑니다.
 
 ---
 

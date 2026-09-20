@@ -34,6 +34,15 @@ terraform {
   # 예전엔 DynamoDB 테이블이 따로 필요했지만, Terraform 1.11부터 S3 자체 락을
   # 지원해서 테이블 없이 이 한 줄이면 됩니다. (S3에 .tflock 파일로 구현됨)
   #
+  # [환경 분리 — Day 12]
+  # 버킷은 같고 key만 다릅니다:
+  #   eks-lab/dev/terraform.tfstate
+  #   eks-lab/prod/terraform.tfstate
+  # state가 완전히 분리되므로 dev에 apply해도 prod는 아무 영향이 없습니다.
+  # 잠금(.tflock)도 key별로 걸려서 두 환경을 동시에 작업할 수 있습니다.
+  #
+  # 대안인 workspace 방식과의 비교는 docs/day-12-modules.md 에 정리했습니다.
+  #
   # [이 버킷은 destroy 대상이 아닙니다]
   # 매일 apply/destroy하는 리소스와 달리, 버킷은 Terraform 바깥에서 1회 생성해
   # 계속 유지합니다. state를 담는 그릇이 state와 함께 사라지면 안 되니까요.
@@ -41,7 +50,7 @@ terraform {
   # --------------------------------------------------------------------------
   backend "s3" {
     bucket       = "deepagent-eks-tfstate"
-    key          = "eks-lab/terraform.tfstate"
+    key          = "eks-lab/dev/terraform.tfstate" # ← 환경마다 다른 key = 분리된 state
     region       = "ap-northeast-2"
     encrypt      = true
     use_lockfile = true

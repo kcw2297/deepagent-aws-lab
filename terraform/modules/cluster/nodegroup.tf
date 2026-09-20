@@ -82,7 +82,7 @@ resource "aws_eks_node_group" "this" {
 
   # 노드는 프라이빗 서브넷에 둡니다. 외부에서 노드로 직접 들어오는 경로가 없어 안전합니다.
   # 이미지 pull 등 나가는 통신은 Day 1에서 만든 NAT를 통합니다.
-  subnet_ids = aws_subnet.private[*].id
+  subnet_ids = var.private_subnet_ids
 
   # AL2023 = Amazon Linux 2023. EKS 1.33부터 구형 AL2는 지원되지 않습니다.
   #

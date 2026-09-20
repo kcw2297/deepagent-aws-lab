@@ -7,6 +7,11 @@ variable "region" {
   default     = "ap-northeast-2"
 }
 
+variable "environment" {
+  description = "환경 이름. 공통 태그(Env)에 붙어 콘솔·비용 탐색기에서 dev/prod를 구분합니다"
+  type        = string
+}
+
 variable "project" {
   description = "리소스 이름/태그의 접두사로 쓰는 프로젝트 이름"
   type        = string

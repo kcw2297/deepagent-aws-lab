@@ -8,7 +8,11 @@
 #   하루 마무리: make destroy   ← 반드시! 비용이 시간당 발생합니다
 # ============================================================================
 
-TF_DIR := terraform
+# [Day 12] 환경별 루트 모듈. ENV로 고릅니다.
+#   make plan            → dev (기본값)
+#   make plan ENV=prod   → prod (학습용 리포에서는 plan까지만)
+ENV    ?= dev
+TF_DIR := terraform/envs/$(ENV)
 TF     := terraform -chdir=$(TF_DIR)
 REGION := ap-northeast-2
 
@@ -20,6 +24,7 @@ REGION := ap-northeast-2
 help:
 	@echo ""
 	@echo "  make init      백엔드(S3) 연결 + provider 설치 — 새 맥북에서 1회"
+	@echo "                 (환경마다 한 번씩: make init ENV=dev / make init ENV=prod)"
 	@echo "  make plan      무엇이 왜 만들어지는지 미리보기 (apply 전에 꼭 읽기)"
 	@echo "  make apply     인프라 생성 — 오늘의 학습 시작"
 	@echo "  make destroy   인프라 정리 — 오늘의 학습 끝 (비용 차단)"
@@ -27,6 +32,9 @@ help:
 	@echo "  apply 후에는 kubeconfig 갱신이 필요합니다 (엔드포인트가 새로 발급됨):"
 	@echo "    aws eks update-kubeconfig --region $(REGION) \\"
 	@echo "      --name \$$($(TF) output -raw cluster_name)"
+	@echo ""
+	@echo "  현재 ENV=$(ENV)  →  $(TF_DIR)"
+	@echo "  환경을 바꾸려면 뒤에 ENV=prod 를 붙이세요 (state가 분리되어 있습니다)."
 	@echo ""
 	@echo "  state는 S3(deepagent-eks-tfstate)에 있어 맥북 2대가 같은 것을 봅니다."
 	@echo "  자세히: docs/remote-state.md"
@@ -93,5 +101,8 @@ destroy:
 	@# Cluster Autoscaler는 AWS 리소스를 새로 만들지 않아 고아 위험은 없습니다(ASG의 desired만 조작).
 	@# 다만 destroy 도중 노드가 사라지는 걸 보고 다시 늘리려 들 수 있어 먼저 내립니다.
 	-@helm uninstall cluster-autoscaler -n kube-system 2>/dev/null || echo "   Cluster Autoscaler (없음 — 건너뜁니다)"
-	@echo "── ④ terraform destroy"
+	@echo "── ④ terraform destroy (ENV=$(ENV))"
 	$(TF) destroy
+	@echo ""
+	@echo "   ⚠️ destroy는 끝까지 기다리세요. 중간에 터미널을 닫으면 클러스터가 남고"
+	@echo "      S3에 잠금(.tflock)이 남습니다 → terraform force-unlock <ID> 로 해제"

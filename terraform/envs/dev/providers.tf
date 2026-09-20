@@ -1,4 +1,4 @@
-# AWS provider 설정: 어느 리전에, 어떤 자격증명으로 리소스를 만들지 정합니다.
+# AWS provider 설정 (루트 모듈에만 둡니다 — 하위 모듈은 이것을 물려받습니다): 어느 리전에, 어떤 자격증명으로 리소스를 만들지 정합니다.
 # 자격증명은 aws-cli가 이미 구성한 것(~/.aws/credentials, 환경변수)을 자동으로 사용합니다.
 
 provider "aws" {
@@ -10,7 +10,7 @@ provider "aws" {
     tags = {
       Project   = var.project
       ManagedBy = "terraform"
-      Env       = "lab"
+      Env       = var.environment
     }
   }
 }

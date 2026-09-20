@@ -101,10 +101,21 @@ terraform init
 이후엔 어느 기기든 `terraform plan/apply/destroy`가 **같은 state**를 봅니다.
 git으로 state를 주고받을 일은 없습니다. (`.gitignore`가 `*.tfstate`를 계속 막고 있습니다)
 
+## 환경별 key (Day 12)
+
+```
+eks-lab/dev/terraform.tfstate     ← make apply (기본값)
+eks-lab/prod/terraform.tfstate    ← make plan ENV=prod
+```
+
+버킷은 하나, key만 다릅니다. state가 분리되므로 dev 작업이 prod에 영향을 주지 않고,
+락도 key별로 걸려 두 환경을 동시에 다룰 수 있습니다.
+(Day 11까지 쓰던 `eks-lab/terraform.tfstate`는 비어 있는 채로 남아 있습니다)
+
 ## 달라진 매일 루틴
 
 ```bash
-cd terraform
+cd terraform/envs/dev
 terraform apply      # S3의 state를 읽고 → 잠금 → 생성 → state 갱신 → 잠금 해제
 # ... 오늘의 학습 ...
 terraform destroy    # 리소스 정리 (버킷은 남습니다)
@@ -129,7 +140,15 @@ state 파일은 수십 KB라 S3 요금은 **월 1센트 미만**입니다.
 **`Error acquiring the state lock`**
 비정상 종료로 락이 남은 경우입니다. 다른 곳에서 정말 실행 중이 아닌지 확인 후:
 ```bash
-terraform force-unlock <LOCK_ID>
+terraform -chdir=terraform/envs/dev force-unlock <LOCK_ID>
+```
+
+실제로 겪었습니다 (2026-09-19): `make destroy`가 클러스터 삭제 도중 끊겨
+**클러스터가 16.5시간 살아남고**(약 $1.65) S3에 락만 남았습니다.
+락 해제는 Terraform이 정상 종료할 때 하므로, **destroy는 끝까지 기다려야 합니다.**
+락 파일 내용에 누가·언제·무슨 작업을 시작했는지 들어 있습니다:
+```bash
+aws s3 cp s3://deepagent-eks-tfstate/eks-lab/dev/terraform.tfstate.tflock -
 ```
 
 **state가 꼬였을 때**
